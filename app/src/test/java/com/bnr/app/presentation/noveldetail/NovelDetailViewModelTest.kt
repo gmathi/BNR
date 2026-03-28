@@ -8,6 +8,7 @@ import com.bnr.app.domain.usecase.AddNovelToLibraryUseCase
 import com.bnr.app.domain.usecase.DownloadChapterUseCase
 import com.bnr.app.domain.usecase.GetChapterListUseCase
 import com.bnr.app.domain.usecase.GetNovelDetailUseCase
+import com.bnr.app.domain.usecase.MarkNovelUpdatesSeenUseCase
 import com.bnr.app.domain.usecase.RemoveNovelFromLibraryUseCase
 import com.bnr.app.domain.usecase.makeChapter
 import com.bnr.app.domain.usecase.makeNovel
@@ -51,6 +52,7 @@ class NovelDetailViewModelTest {
     private val removeFromLibrary: RemoveNovelFromLibraryUseCase = mockk(relaxed = true)
     private val downloadChapterUseCase: DownloadChapterUseCase = mockk(relaxed = true)
     private val chapterRepository: ChapterRepository = mockk(relaxed = true)
+    private val markNovelUpdatesSeen: MarkNovelUpdatesSeenUseCase = mockk(relaxed = true)
 
     // ── Fixtures ──────────────────────────────────────────────────────────────
 
@@ -94,6 +96,7 @@ class NovelDetailViewModelTest {
             removeFromLibrary = removeFromLibrary,
             downloadChapter = downloadChapterUseCase,
             chapterRepository = chapterRepository,
+            markNovelUpdatesSeen = markNovelUpdatesSeen,
             savedStateHandle = handle
         )
 
@@ -118,6 +121,7 @@ class NovelDetailViewModelTest {
                 removeFromLibrary = removeFromLibrary,
                 downloadChapter = downloadChapterUseCase,
                 chapterRepository = chapterRepository,
+                markNovelUpdatesSeen = markNovelUpdatesSeen,
                 savedStateHandle = savedStateHandle()
             )
 

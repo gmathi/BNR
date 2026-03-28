@@ -71,7 +71,7 @@ class NovelUpdateWorkerTest {
         url = url,
         status = NovelStatus.ONGOING,
         genres = emptyList(),
-        isInLibrary = true,
+        inLibrary = true,
         addedToLibraryAt = 0L,
         lastReadChapterId = null
     )
