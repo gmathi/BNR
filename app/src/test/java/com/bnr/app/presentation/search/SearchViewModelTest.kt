@@ -3,6 +3,7 @@ package com.bnr.app.presentation.search
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import app.cash.turbine.test
 import com.bnr.app.core.datastore.AppPreferences
+import com.bnr.app.domain.usecase.GetLibraryNovelsUseCase
 import com.bnr.app.domain.usecase.GetPopularNovelsUseCase
 import com.bnr.app.domain.usecase.SearchNovelsUseCase
 import com.bnr.app.domain.usecase.makeNovel
@@ -16,6 +17,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -43,13 +45,18 @@ class SearchViewModelTest {
 
     private val searchNovels: SearchNovelsUseCase = mockk(relaxed = true)
     private val getPopularNovels: GetPopularNovelsUseCase = mockk(relaxed = true)
+    private val getLibraryNovels: GetLibraryNovelsUseCase = mockk(relaxed = true)
     private val sourceManager: SourceManager = mockk(relaxed = true)
     private val appPreferences: AppPreferences = mockk(relaxed = true)
 
-    // A single fake source returned by SourceManager.
     private val fakeSource = mockk<com.bnr.app.source.Source>(relaxed = true).also { src ->
         every { src.id } returns "com.source.test"
         every { src.name } returns "Test Source"
+    }
+
+    private val fakeSource2 = mockk<com.bnr.app.source.Source>(relaxed = true).also { src ->
+        every { src.id } returns "com.source.other"
+        every { src.name } returns "Other Source"
     }
 
     private val novel1 = makeNovel(id = "src::n1", title = "Novel One")
@@ -58,188 +65,235 @@ class SearchViewModelTest {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /**
-     * Creates a fresh ViewModel with default stubs. The init block executes synchronously
-     * thanks to [UnconfinedTestDispatcher] installed by [mainDispatcherRule].
+     * Creates a fresh ViewModel with default stubs (single source, empty library,
+     * empty popular result unless overridden).
      */
     private fun createViewModel(
         popularResult: SourceResult<List<com.bnr.app.domain.model.Novel>> =
-            SourceResult.Success(emptyList())
+            SourceResult.Success(emptyList()),
+        sources: List<com.bnr.app.source.Source> = listOf(fakeSource),
+        libraryFlow: kotlinx.coroutines.flow.Flow<List<com.bnr.app.domain.model.Novel>> =
+            flowOf(emptyList())
     ): SearchViewModel {
-        every { sourceManager.getAllSources() } returns listOf(fakeSource)
+        every { sourceManager.getAllSources() } returns sources
         every { appPreferences.preferredSourceId } returns flowOf(fakeSource.id)
+        every { getLibraryNovels() } returns libraryFlow
         coEvery { getPopularNovels(any(), any()) } returns popularResult
-        return SearchViewModel(searchNovels, getPopularNovels, sourceManager, appPreferences)
+        return SearchViewModel(searchNovels, getPopularNovels, getLibraryNovels, sourceManager, appPreferences)
     }
 
-    // ── Initial state ─────────────────────────────────────────────────────────
+    // ── 1. Initial state ──────────────────────────────────────────────────────
 
     @Test
-    fun `initial state has isLoading false, empty novels, and blank query`() =
+    fun `initial state isSearchMode false libraryIds empty sourceResults empty`() =
         runTest(UnconfinedTestDispatcher()) {
             val vm = createViewModel()
             val state = vm.uiState.value
-            assertFalse("isLoading should be false initially", state.isLoading)
-            assertTrue("novels list should be empty", state.novels.isEmpty())
-            assertEquals("query should be empty", "", state.query)
+            assertFalse("isSearchMode should be false initially", state.isSearchMode)
+            assertTrue("libraryIds should be empty initially", state.libraryIds.isEmpty())
+            assertTrue("sourceResults should be empty initially", state.sourceResults.isEmpty())
         }
 
-    // ── onSourceSelected ──────────────────────────────────────────────────────
+    // ── 2. Library IDs populated from use case ────────────────────────────────
 
     @Test
-    fun `onSourceSelected updates selectedSourceId and triggers loadPopular`() =
+    fun `library IDs populated from use case`() =
         runTest(UnconfinedTestDispatcher()) {
-            val vm = createViewModel()
+            val libraryFlow = MutableStateFlow(listOf(novel1, novel2))
+            val vm = createViewModel(libraryFlow = libraryFlow)
 
-            coEvery { getPopularNovels("com.source.other", 1) } returns
+            val state = vm.uiState.value
+            assertTrue("libraryIds should contain novel1.id", novel1.id in state.libraryIds)
+            assertTrue("libraryIds should contain novel2.id", novel2.id in state.libraryIds)
+        }
+
+    // ── 3. onQueryChanged blank switches to popular mode ──────────────────────
+
+    @Test
+    fun `onQueryChanged blank switches isSearchMode to false and loads popular`() =
+        runTest(UnconfinedTestDispatcher()) {
+            coEvery { getPopularNovels("com.source.test", 1) } returns
                 SourceResult.Success(listOf(novel1))
 
-            vm.onSourceSelected("com.source.other")
+            val vm = createViewModel()
 
-            assertEquals("com.source.other", vm.uiState.value.selectedSourceId)
-            coVerify(atLeast = 1) { getPopularNovels("com.source.other", 1) }
-            assertEquals(listOf(novel1), vm.uiState.value.novels)
+            // First go into search mode
+            vm.onQueryChanged("magic")
+            advanceTimeBy(500)
+
+            // Now clear the query
+            vm.onQueryChanged("")
+
+            assertFalse("isSearchMode should be false when query is blank", vm.uiState.value.isSearchMode)
+            coVerify(atLeast = 1) { getPopularNovels("com.source.test", 1) }
         }
 
+    // ── 4. onQueryChanged non-blank switches to search mode after debounce ────
+
     @Test
-    fun `onSourceSelected resets page to 1 and clears existing novels`() =
+    fun `onQueryChanged non-blank after 400ms debounce isSearchMode true`() =
         runTest(UnconfinedTestDispatcher()) {
-            // Seed page-1 with two novels so we have a non-empty initial list.
-            val vm = createViewModel(SourceResult.Success(listOf(novel1, novel2)))
-            assertEquals(2, vm.uiState.value.novels.size)
+            coEvery { searchNovels(any(), any(), any()) } returns SourceResult.Success(emptyList())
 
-            // Switch source – page resets to 1, novels clear before the new load.
-            coEvery { getPopularNovels("com.source.other", 1) } returns
-                SourceResult.Success(emptyList())
-            vm.onSourceSelected("com.source.other")
+            val vm = createViewModel()
+            vm.onQueryChanged("dragon")
+            advanceTimeBy(500)
 
-            assertEquals(1, vm.uiState.value.page)
+            assertTrue("isSearchMode should be true after non-blank query", vm.uiState.value.isSearchMode)
         }
 
-    // ── loadNextPage ──────────────────────────────────────────────────────────
+    // ── 5. Search fires for all sources in parallel ───────────────────────────
 
     @Test
-    fun `loadNextPage when hasNextPage true and not loading increments page`() =
+    fun `search fires for all sources when query is non-blank`() =
         runTest(UnconfinedTestDispatcher()) {
-            // Create VM with page-1 returning two novels (non-empty → hasNextPage = true).
-            val vm = createViewModel(SourceResult.Success(listOf(novel1, novel2)))
-            assertEquals(1, vm.uiState.value.page)
-            assertTrue(vm.uiState.value.hasNextPage)
+            coEvery { searchNovels(any(), any(), any()) } returns SourceResult.Success(emptyList())
 
-            // Stub page 2 AFTER the VM is created so this stub wins over the any() fallback.
-            coEvery { getPopularNovels("com.source.test", 2) } returns
-                SourceResult.Success(listOf(novel2))
+            val vm = createViewModel(sources = listOf(fakeSource, fakeSource2))
+            vm.onQueryChanged("magic")
+            advanceTimeBy(500)
 
-            vm.loadNextPage()
-
-            assertEquals(2, vm.uiState.value.page)
-            coVerify(exactly = 1) { getPopularNovels("com.source.test", 2) }
+            coVerify(atLeast = 1) { searchNovels("com.source.test", "magic", 1) }
+            coVerify(atLeast = 1) { searchNovels("com.source.other", "magic", 1) }
         }
 
+    // ── 6. Per-source loading state ───────────────────────────────────────────
+
     @Test
-    fun `loadNextPage when isLoading true does NOT trigger another load`() =
+    fun `per-source loading state is true during search and false after completion`() =
         runTest(UnconfinedTestDispatcher()) {
-            // Build the ViewModel manually so we control the stub order precisely.
-            // The delay stub must be the last registered so it wins over any wildcard.
-            every { sourceManager.getAllSources() } returns listOf(fakeSource)
-            every { appPreferences.preferredSourceId } returns flowOf(fakeSource.id)
-            // Register delay stub LAST so it takes priority in MockK's answer list.
-            coEvery { getPopularNovels(any(), any()) } coAnswers {
+            // Use a suspended stub so we can observe the loading state mid-flight
+            coEvery { searchNovels("com.source.test", "magic", 1) } coAnswers {
                 delay(Long.MAX_VALUE / 2)
                 SourceResult.Success(emptyList())
             }
-            val vm = SearchViewModel(searchNovels, getPopularNovels, sourceManager, appPreferences)
 
-            // With UnconfinedTestDispatcher the init coroutine suspends at the delay,
-            // so isLoading is currently true.
-            assertTrue("precondition: should be loading", vm.uiState.value.isLoading)
-
-            // loadNextPage should be a no-op because isLoading == true.
-            vm.loadNextPage()
-
-            // getPopularNovels should have been called exactly once (from init).
-            coVerify(exactly = 1) { getPopularNovels(any(), any()) }
-        }
-
-    // ── Search success ────────────────────────────────────────────────────────
-
-    @Test
-    fun `search success updates novels list, clears error, and sets isLoading false`() =
-        runTest(UnconfinedTestDispatcher()) {
             val vm = createViewModel()
-            coEvery { searchNovels("com.source.test", "magic", 1) } returns
-                SourceResult.Success(listOf(novel1))
-
-            // The ViewModel debounces 400 ms before calling performSearch.
-            vm.onQueryChanged("magic")
-            // Advance virtual time past the 400 ms debounce.
-            advanceTimeBy(500)
-
-            val state = vm.uiState.value
-            assertFalse("isLoading should be false after search", state.isLoading)
-            assertNull("error should be null on success", state.error)
-            assertEquals(listOf(novel1), state.novels)
-        }
-
-    @Test
-    fun `search success via turbine emits updated novels`() =
-        runTest(UnconfinedTestDispatcher()) {
-            val vm = createViewModel()
-            coEvery { searchNovels("com.source.test", "magic", 1) } returns
-                SourceResult.Success(listOf(novel1, novel2))
 
             vm.uiState.test {
-                awaitItem() // consume initial state
+                awaitItem() // initial state
 
                 vm.onQueryChanged("magic")
-                advanceTimeBy(500) // past debounce
+                advanceTimeBy(500) // past debounce, triggers search (which then suspends)
 
-                // Drain until we see a stable state with novels and not loading.
+                // Drain to the state where source is loading
                 var latest = expectMostRecentItem()
-                while (latest.isLoading || latest.novels.isEmpty()) {
+                while (latest.sourceResults.none { it.isLoading }) {
                     latest = awaitItem()
                 }
-
-                assertEquals(2, latest.novels.size)
-                assertNull(latest.error)
+                assertTrue(
+                    "sourceResults should have at least one source with isLoading=true",
+                    latest.sourceResults.any { it.isLoading }
+                )
                 cancelAndIgnoreRemainingEvents()
             }
         }
 
-    // ── Search error ──────────────────────────────────────────────────────────
+    // ── 7. Per-source success ─────────────────────────────────────────────────
 
     @Test
-    fun `search error sets error message and isLoading false`() =
+    fun `per-source success novels appear in correct SourceSearchState`() =
         runTest(UnconfinedTestDispatcher()) {
-            val vm = createViewModel()
+            coEvery { searchNovels("com.source.test", "magic", 1) } returns
+                SourceResult.Success(listOf(novel1))
+            coEvery { searchNovels("com.source.other", "magic", 1) } returns
+                SourceResult.Success(listOf(novel2))
+
+            val vm = createViewModel(sources = listOf(fakeSource, fakeSource2))
+            vm.onQueryChanged("magic")
+            advanceTimeBy(500)
+
+            val state = vm.uiState.value
+            val src1State = state.sourceResults.find { it.sourceId == "com.source.test" }
+            val src2State = state.sourceResults.find { it.sourceId == "com.source.other" }
+
+            assertEquals(listOf(novel1), src1State?.novels)
+            assertEquals(listOf(novel2), src2State?.novels)
+            assertFalse("src1 should not be loading", src1State?.isLoading ?: true)
+            assertFalse("src2 should not be loading", src2State?.isLoading ?: true)
+        }
+
+    // ── 8. Per-source error ───────────────────────────────────────────────────
+
+    @Test
+    fun `per-source error sets error on correct source and leaves other source unaffected`() =
+        runTest(UnconfinedTestDispatcher()) {
             coEvery { searchNovels("com.source.test", "fail", 1) } returns
                 SourceResult.Error(SourceException.NetworkException("Network failure"))
+            coEvery { searchNovels("com.source.other", "fail", 1) } returns
+                SourceResult.Success(listOf(novel1))
 
+            val vm = createViewModel(sources = listOf(fakeSource, fakeSource2))
             vm.onQueryChanged("fail")
             advanceTimeBy(500)
 
             val state = vm.uiState.value
-            assertFalse("isLoading should be false on error", state.isLoading)
-            assertEquals("Network failure", state.error)
+            val src1State = state.sourceResults.find { it.sourceId == "com.source.test" }
+            val src2State = state.sourceResults.find { it.sourceId == "com.source.other" }
+
+            assertEquals("Network failure", src1State?.error)
+            assertFalse("src1 should not be loading", src1State?.isLoading ?: true)
+            assertNull("src2 should have no error", src2State?.error)
+            assertEquals(listOf(novel1), src2State?.novels)
         }
 
-    // ── Pagination – second page appends ─────────────────────────────────────
+    // ── 9. loadNextSourcePage ─────────────────────────────────────────────────
 
     @Test
-    fun `second page results are appended to existing novels list`() =
+    fun `loadNextSourcePage increments page for correct source only`() =
         runTest(UnconfinedTestDispatcher()) {
-            // Create VM with page-1 returning novel1.
-            val vm = createViewModel(SourceResult.Success(listOf(novel1)))
-
-            // After init, page 1 is loaded and hasNextPage is true.
-            assertEquals(listOf(novel1), vm.uiState.value.novels)
-
-            // Stub page 2 AFTER the VM is created so this specific stub wins.
-            coEvery { getPopularNovels("com.source.test", 2) } returns
+            coEvery { searchNovels(any(), any(), 1) } returns SourceResult.Success(listOf(novel1))
+            coEvery { searchNovels("com.source.test", "magic", 2) } returns
                 SourceResult.Success(listOf(novel2))
 
-            vm.loadNextPage()
+            val vm = createViewModel(sources = listOf(fakeSource, fakeSource2))
+            vm.onQueryChanged("magic")
+            advanceTimeBy(500)
 
-            assertEquals(listOf(novel1, novel2), vm.uiState.value.novels)
-            assertEquals(2, vm.uiState.value.page)
+            // Verify page 1 is loaded for both
+            val beforeState = vm.uiState.value
+            assertEquals(1, beforeState.sourceResults.find { it.sourceId == "com.source.test" }?.page)
+            assertEquals(1, beforeState.sourceResults.find { it.sourceId == "com.source.other" }?.page)
+
+            // Load next page for source 1 only
+            vm.loadNextSourcePage("com.source.test")
+
+            val afterState = vm.uiState.value
+            val src1After = afterState.sourceResults.find { it.sourceId == "com.source.test" }
+            val src2After = afterState.sourceResults.find { it.sourceId == "com.source.other" }
+
+            assertEquals("page should be 2 for source 1", 2, src1After?.page)
+            assertEquals("page should still be 1 for source 2", 1, src2After?.page)
+            // Novels should be appended for source 1
+            assertEquals(listOf(novel1, novel2), src1After?.novels)
+        }
+
+    // ── 10. Popular load on init ──────────────────────────────────────────────
+
+    @Test
+    fun `popular load populates popularNovels on init`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val vm = createViewModel(popularResult = SourceResult.Success(listOf(novel1, novel2)))
+            val state = vm.uiState.value
+            assertEquals(listOf(novel1, novel2), state.popularNovels)
+            assertFalse("popularIsLoading should be false after load", state.popularIsLoading)
+        }
+
+    // ── 11. Popular source switch ─────────────────────────────────────────────
+
+    @Test
+    fun `onPopularSourceSelected reloads popular with new source`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val vm = createViewModel()
+
+            coEvery { getPopularNovels("com.source.other", 1) } returns
+                SourceResult.Success(listOf(novel1, novel2))
+
+            vm.onPopularSourceSelected("com.source.other")
+
+            assertEquals("com.source.other", vm.uiState.value.popularSourceId)
+            coVerify(atLeast = 1) { getPopularNovels("com.source.other", 1) }
+            assertEquals(listOf(novel1, novel2), vm.uiState.value.popularNovels)
+            assertEquals(1, vm.uiState.value.popularPage)
         }
 }
