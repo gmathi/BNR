@@ -1,0 +1,139 @@
+package com.bnr.app.tts.impl
+
+import android.content.Context
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
+import com.bnr.app.domain.model.TtsVoice
+import com.bnr.app.tts.TtsEngine
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.suspendCancellableCoroutine
+import java.util.Locale
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.coroutines.resume
+
+@Singleton
+class AndroidTtsEngine @Inject constructor(
+    @ApplicationContext private val context: Context
+) : TtsEngine {
+
+    override val id = "android"
+    override val name = "Android TTS"
+
+    private var tts: TextToSpeech? = null
+    private var isInitialized = false
+
+    private val _isSpeaking = MutableStateFlow(false)
+    override val isSpeaking: StateFlow<Boolean> = _isSpeaking.asStateFlow()
+
+    private val _currentWordIndex = MutableStateFlow<Int?>(null)
+    override val currentWordIndex: StateFlow<Int?> = _currentWordIndex.asStateFlow()
+
+    override suspend fun initialize(): Boolean = suspendCancellableCoroutine { continuation ->
+        if (isInitialized && tts != null) {
+            continuation.resume(true)
+            return@suspendCancellableCoroutine
+        }
+        tts = TextToSpeech(context) { status ->
+            isInitialized = (status == TextToSpeech.SUCCESS)
+            if (isInitialized) {
+                tts?.language = Locale.getDefault()
+                setupProgressListener()
+            }
+            if (continuation.isActive) continuation.resume(isInitialized)
+        }
+        continuation.invokeOnCancellation { tts?.shutdown() }
+    }
+
+    private fun setupProgressListener() {
+        tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {
+                _isSpeaking.value = true
+            }
+
+            override fun onDone(utteranceId: String?) {
+                _isSpeaking.value = false
+                _currentWordIndex.value = null
+            }
+
+            @Deprecated("Deprecated in Java")
+            override fun onError(utteranceId: String?) {
+                _isSpeaking.value = false
+                _currentWordIndex.value = null
+            }
+
+            override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
+                // Approximate word index via character offset — not perfect but functional
+                _currentWordIndex.value = start
+            }
+        })
+    }
+
+    override suspend fun speak(text: String, voiceId: String?) {
+        if (!isInitialized) initialize()
+        val engine = tts ?: return
+
+        voiceId?.let { id ->
+            engine.voices?.find { it.name == id }?.let { engine.voice = it }
+        }
+
+        engine.speak(
+            text,
+            TextToSpeech.QUEUE_FLUSH,
+            null,
+            UUID.randomUUID().toString()
+        )
+    }
+
+    override fun stop() {
+        tts?.stop()
+        _isSpeaking.value = false
+        _currentWordIndex.value = null
+    }
+
+    override fun pause() {
+        // Android TTS doesn't natively support pause; stop is the closest equivalent
+        tts?.stop()
+        _isSpeaking.value = false
+    }
+
+    override fun resume() {
+        // Resume is not supported by Android TTS natively — no-op
+    }
+
+    override suspend fun getAvailableVoices(): List<TtsVoice> {
+        if (!isInitialized) initialize()
+        return tts?.voices
+            ?.filter { !it.isNetworkConnectionRequired || it.features?.contains("network") == true }
+            ?.map { voice ->
+                TtsVoice(
+                    id = voice.name,
+                    displayName = buildDisplayName(voice.name, voice.locale),
+                    locale = voice.locale.toLanguageTag(),
+                    engineId = id,
+                    isNeural = voice.quality >= android.speech.tts.Voice.QUALITY_VERY_HIGH
+                )
+            }
+            ?.sortedWith(compareBy({ it.locale }, { it.displayName }))
+            ?: emptyList()
+    }
+
+    private fun buildDisplayName(name: String, locale: Locale): String {
+        val lang = locale.getDisplayLanguage(Locale.getDefault())
+        val country = locale.getDisplayCountry(Locale.getDefault())
+        val suffix = if (country.isNotEmpty()) "$lang ($country)" else lang
+        // Strip engine-specific prefix noise from the raw voice name
+        val clean = name.substringAfterLast("#").replace("-", " ").trimEnd()
+        return "$clean — $suffix"
+    }
+
+    fun shutdown() {
+        tts?.shutdown()
+        tts = null
+        isInitialized = false
+    }
+}
