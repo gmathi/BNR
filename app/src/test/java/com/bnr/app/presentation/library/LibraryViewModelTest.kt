@@ -3,6 +3,7 @@ package com.bnr.app.presentation.library
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import app.cash.turbine.test
 import com.bnr.app.domain.model.Novel
+import com.bnr.app.domain.model.NovelStatus
 import com.bnr.app.domain.usecase.GetLibraryNovelsUseCase
 import com.bnr.app.domain.usecase.makeNovel
 import com.bnr.app.presentation.MainDispatcherRule
@@ -12,7 +13,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -41,67 +41,302 @@ class LibraryViewModelTest {
     // ── Tests ─────────────────────────────────────────────────────────────────
 
     @Test
-    fun `initial state emits empty list before any library novels arrive`() =
+    fun `initial state has empty displayedNovels, blank searchQuery, and DATE_ADDED sort`() =
         runTest(UnconfinedTestDispatcher()) {
-            // Use-case returns a flow that never emits, so the stateIn initial value is used.
             every { getLibraryNovels() } returns flow { awaitCancellation() }
 
             val vm = createViewModel()
 
-            vm.novels.test {
-                val initial = awaitItem()
-                assertTrue("Initial emission should be empty list", initial.isEmpty())
+            vm.uiState.test {
+                val state = awaitItem()
+                assertTrue("displayedNovels should be empty", state.displayedNovels.isEmpty())
+                assertTrue("allNovels should be empty", state.allNovels.isEmpty())
+                assertEquals("", state.searchQuery)
+                assertEquals(LibrarySortOption.DATE_ADDED, state.sortOption)
                 cancelAndIgnoreRemainingEvents()
             }
         }
 
     @Test
-    fun `library novels flow emission updates novels state`() =
+    fun `search filters by title case insensitive`() =
         runTest(UnconfinedTestDispatcher()) {
-            val novel1 = makeNovel(id = "src::lib1", title = "Library Novel 1", inLibrary = true)
-            val novel2 = makeNovel(id = "src::lib2", title = "Library Novel 2", inLibrary = true)
-            every { getLibraryNovels() } returns flowOf(listOf(novel1, novel2))
-
-            val vm = createViewModel()
-
-            vm.novels.test {
-                // With UnconfinedTestDispatcher the upstream flowOf completes eagerly.
-                // Consume items until we see the populated list (skipping the empty initial value).
-                var latest: List<Novel> = awaitItem()
-                if (latest.isEmpty()) latest = awaitItem()
-
-                assertEquals(2, latest.size)
-                assertEquals(novel1, latest[0])
-                assertEquals(novel2, latest[1])
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
-
-    @Test
-    fun `multiple emissions update state in order`() =
-        runTest(UnconfinedTestDispatcher()) {
-            val novel1 = makeNovel(id = "src::a", title = "Alpha", inLibrary = true)
-            val novel2 = makeNovel(id = "src::b", title = "Beta", inLibrary = true)
-            val libraryFlow = MutableStateFlow<List<Novel>>(emptyList())
+            val shadowSlave = makeNovel(id = "src::1", title = "Shadow Slave", author = "Author X")
+            val cultivation = makeNovel(id = "src::2", title = "Cultivation Chat Group", author = "Author Y")
+            val libraryFlow = MutableStateFlow<List<Novel>>(listOf(shadowSlave, cultivation))
             every { getLibraryNovels() } returns libraryFlow
 
             val vm = createViewModel()
 
-            vm.novels.test {
-                // 1st emission: stateIn initial value (empty list).
-                val first = awaitItem()
-                assertTrue(first.isEmpty())
+            vm.uiState.test {
+                // Consume initial emission with both novels
+                var state = awaitItem()
+                if (state.displayedNovels.isEmpty()) state = awaitItem()
 
-                // 2nd emission: one novel added.
-                libraryFlow.value = listOf(novel1)
-                val second = awaitItem()
-                assertEquals(listOf(novel1), second)
+                vm.onSearchQueryChanged("shadow")
+                state = awaitItem()
 
-                // 3rd emission: two novels.
-                libraryFlow.value = listOf(novel1, novel2)
-                val third = awaitItem()
-                assertEquals(listOf(novel1, novel2), third)
+                assertEquals(1, state.displayedNovels.size)
+                assertEquals(shadowSlave, state.displayedNovels[0])
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
 
+    @Test
+    fun `search filters by author case insensitive`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val novel1 = makeNovel(id = "src::1", title = "Novel One", author = "Author1")
+            val novel2 = makeNovel(id = "src::2", title = "Novel Two", author = "Author2")
+            val novel3 = makeNovel(id = "src::3", title = "Novel Three", author = "Author1")
+            val libraryFlow = MutableStateFlow<List<Novel>>(listOf(novel1, novel2, novel3))
+            every { getLibraryNovels() } returns libraryFlow
+
+            val vm = createViewModel()
+
+            vm.uiState.test {
+                var state = awaitItem()
+                if (state.displayedNovels.isEmpty()) state = awaitItem()
+
+                vm.onSearchQueryChanged("author1")
+                state = awaitItem()
+
+                assertEquals(2, state.displayedNovels.size)
+                assertTrue(state.displayedNovels.all { it.author == "Author1" })
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `clearing search query shows all novels again`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val novel1 = makeNovel(id = "src::1", title = "Shadow Slave", author = "Author X")
+            val novel2 = makeNovel(id = "src::2", title = "Cultivation Chat Group", author = "Author Y")
+            val libraryFlow = MutableStateFlow<List<Novel>>(listOf(novel1, novel2))
+            every { getLibraryNovels() } returns libraryFlow
+
+            val vm = createViewModel()
+
+            vm.uiState.test {
+                var state = awaitItem()
+                if (state.displayedNovels.isEmpty()) state = awaitItem()
+
+                vm.onSearchQueryChanged("shadow")
+                state = awaitItem()
+                assertEquals(1, state.displayedNovels.size)
+
+                vm.onSearchQueryChanged("")
+                state = awaitItem()
+                assertEquals(2, state.displayedNovels.size)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `sort DATE_ADDED orders novels by addedToLibraryAt descending`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val older  = makeNovel(id = "src::1", title = "Older",  addedToLibraryAt = 1_000L)
+            val newest = makeNovel(id = "src::2", title = "Newest", addedToLibraryAt = 3_000L)
+            val middle = makeNovel(id = "src::3", title = "Middle", addedToLibraryAt = 2_000L)
+            val libraryFlow = MutableStateFlow<List<Novel>>(listOf(older, newest, middle))
+            every { getLibraryNovels() } returns libraryFlow
+
+            val vm = createViewModel()
+
+            vm.uiState.test {
+                var state = awaitItem()
+                if (state.displayedNovels.isEmpty()) state = awaitItem()
+
+                vm.onSortOptionSelected(LibrarySortOption.DATE_ADDED)
+                state = awaitItem()
+
+                assertEquals(listOf(newest, middle, older), state.displayedNovels)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `sort TITLE_AZ orders novels alphabetically ascending`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val charlie = makeNovel(id = "src::1", title = "Charlie")
+            val alpha   = makeNovel(id = "src::2", title = "Alpha")
+            val bravo   = makeNovel(id = "src::3", title = "Bravo")
+            val libraryFlow = MutableStateFlow<List<Novel>>(listOf(charlie, alpha, bravo))
+            every { getLibraryNovels() } returns libraryFlow
+
+            val vm = createViewModel()
+
+            vm.uiState.test {
+                var state = awaitItem()
+                if (state.displayedNovels.isEmpty()) state = awaitItem()
+
+                vm.onSortOptionSelected(LibrarySortOption.TITLE_AZ)
+                state = awaitItem()
+
+                assertEquals(listOf(alpha, bravo, charlie), state.displayedNovels)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `sort TITLE_ZA orders novels alphabetically descending`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val charlie = makeNovel(id = "src::1", title = "Charlie")
+            val alpha   = makeNovel(id = "src::2", title = "Alpha")
+            val bravo   = makeNovel(id = "src::3", title = "Bravo")
+            val libraryFlow = MutableStateFlow<List<Novel>>(listOf(charlie, alpha, bravo))
+            every { getLibraryNovels() } returns libraryFlow
+
+            val vm = createViewModel()
+
+            vm.uiState.test {
+                var state = awaitItem()
+                if (state.displayedNovels.isEmpty()) state = awaitItem()
+
+                vm.onSortOptionSelected(LibrarySortOption.TITLE_ZA)
+                state = awaitItem()
+
+                assertEquals(listOf(charlie, bravo, alpha), state.displayedNovels)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `sort AUTHOR orders novels by author name ascending`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val novelC = makeNovel(id = "src::1", title = "Novel C", author = "Zhao Wei")
+            val novelA = makeNovel(id = "src::2", title = "Novel A", author = "Alice Kim")
+            val novelB = makeNovel(id = "src::3", title = "Novel B", author = "Bob Lee")
+            val libraryFlow = MutableStateFlow<List<Novel>>(listOf(novelC, novelA, novelB))
+            every { getLibraryNovels() } returns libraryFlow
+
+            val vm = createViewModel()
+
+            vm.uiState.test {
+                var state = awaitItem()
+                if (state.displayedNovels.isEmpty()) state = awaitItem()
+
+                vm.onSortOptionSelected(LibrarySortOption.AUTHOR)
+                state = awaitItem()
+
+                assertEquals(listOf(novelA, novelB, novelC), state.displayedNovels)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `sort STATUS orders novels by NovelStatus ordinal`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val unknown   = makeNovel(id = "src::1", title = "Unknown",   status = NovelStatus.UNKNOWN)
+            val completed = makeNovel(id = "src::2", title = "Completed", status = NovelStatus.COMPLETED)
+            val ongoing   = makeNovel(id = "src::3", title = "Ongoing",   status = NovelStatus.ONGOING)
+            val hiatus    = makeNovel(id = "src::4", title = "Hiatus",    status = NovelStatus.HIATUS)
+            val libraryFlow = MutableStateFlow<List<Novel>>(listOf(unknown, completed, ongoing, hiatus))
+            every { getLibraryNovels() } returns libraryFlow
+
+            val vm = createViewModel()
+
+            vm.uiState.test {
+                var state = awaitItem()
+                if (state.displayedNovels.isEmpty()) state = awaitItem()
+
+                vm.onSortOptionSelected(LibrarySortOption.STATUS)
+                state = awaitItem()
+
+                // NovelStatus ordinals: ONGOING=0, COMPLETED=1, HIATUS=2, UNKNOWN=3
+                assertEquals(
+                    listOf(ongoing, completed, hiatus, unknown),
+                    state.displayedNovels
+                )
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `sort TITLE_AZ combined with search filter returns sorted filtered list`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val shadowMaster = makeNovel(id = "src::1", title = "Shadow Master", author = "Author A")
+            val shadowSlave  = makeNovel(id = "src::2", title = "Shadow Slave",  author = "Author B")
+            val cultivation  = makeNovel(id = "src::3", title = "Cultivation Chat Group", author = "Author C")
+            val libraryFlow = MutableStateFlow<List<Novel>>(listOf(shadowSlave, shadowMaster, cultivation))
+            every { getLibraryNovels() } returns libraryFlow
+
+            val vm = createViewModel()
+
+            vm.uiState.test {
+                var state = awaitItem()
+                if (state.displayedNovels.isEmpty()) state = awaitItem()
+
+                vm.onSortOptionSelected(LibrarySortOption.TITLE_AZ)
+                state = awaitItem()
+
+                vm.onSearchQueryChanged("shadow")
+                state = awaitItem()
+
+                assertEquals(2, state.displayedNovels.size)
+                // TITLE_AZ: "Shadow Master" before "Shadow Slave"
+                assertEquals(shadowMaster, state.displayedNovels[0])
+                assertEquals(shadowSlave,  state.displayedNovels[1])
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `onSortOptionSelected updates sortOption in state`() =
+        runTest(UnconfinedTestDispatcher()) {
+            every { getLibraryNovels() } returns flow { awaitCancellation() }
+
+            val vm = createViewModel()
+
+            vm.uiState.test {
+                val initial = awaitItem()
+                assertEquals(LibrarySortOption.DATE_ADDED, initial.sortOption)
+
+                vm.onSortOptionSelected(LibrarySortOption.AUTHOR)
+                val updated = awaitItem()
+                assertEquals(LibrarySortOption.AUTHOR, updated.sortOption)
+
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `onSearchQueryChanged updates searchQuery in state`() =
+        runTest(UnconfinedTestDispatcher()) {
+            every { getLibraryNovels() } returns flow { awaitCancellation() }
+
+            val vm = createViewModel()
+
+            vm.uiState.test {
+                val initial = awaitItem()
+                assertEquals("", initial.searchQuery)
+
+                vm.onSearchQueryChanged("shadow")
+                val updated = awaitItem()
+                assertEquals("shadow", updated.searchQuery)
+
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `allNovels is unaffected by search filter`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val novel1 = makeNovel(id = "src::1", title = "Shadow Slave",          author = "Author X")
+            val novel2 = makeNovel(id = "src::2", title = "Cultivation Chat Group", author = "Author Y")
+            val novel3 = makeNovel(id = "src::3", title = "Omniscient Reader",      author = "Author Z")
+            val libraryFlow = MutableStateFlow<List<Novel>>(listOf(novel1, novel2, novel3))
+            every { getLibraryNovels() } returns libraryFlow
+
+            val vm = createViewModel()
+
+            vm.uiState.test {
+                var state = awaitItem()
+                if (state.allNovels.isEmpty()) state = awaitItem()
+
+                vm.onSearchQueryChanged("shadow")
+                state = awaitItem()
+
+                assertEquals(1, state.displayedNovels.size)
+                assertEquals(3, state.allNovels.size)
                 cancelAndIgnoreRemainingEvents()
             }
         }
