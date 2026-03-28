@@ -41,8 +41,9 @@ class NovelUpdateWorker @AssistedInject constructor(
 
         notificationHelper.showUpdateProgress(0, totalNovels)
 
-        for ((sourceId, novels) in novelsBySource) {
-            val source = sourceManager.getSourceOrNull(sourceId) ?: continue
+        val sourceEntries = novelsBySource.entries.toList()
+        sourceEntries.forEachIndexed { sourceIndex, (sourceId, novels) ->
+            val source = sourceManager.getSourceOrNull(sourceId) ?: return@forEachIndexed
             val rateLimit = source.rateLimit
 
             novels.forEachIndexed { indexInBatch, novel ->
@@ -64,15 +65,17 @@ class NovelUpdateWorker @AssistedInject constructor(
                 checked++
                 notificationHelper.showUpdateProgress(checked, totalNovels)
 
-                // Rate limiting: pause after every requestsPerBatch requests
+                // Rate limiting: pause after every requestsPerBatch requests (not after last in batch)
                 if ((indexInBatch + 1) % rateLimit.requestsPerBatch == 0 &&
                     indexInBatch < novels.lastIndex) {
                     delay(rateLimit.delayBetweenBatchesMs)
                 }
             }
 
-            // Also delay between different sources
-            delay(rateLimit.delayBetweenBatchesMs)
+            // Delay between sources but not after the last one
+            if (sourceIndex < sourceEntries.lastIndex) {
+                delay(rateLimit.delayBetweenBatchesMs)
+            }
         }
 
         notificationHelper.dismissProgressNotification()

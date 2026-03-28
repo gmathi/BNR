@@ -89,6 +89,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun toggleReaderMode() {
+        ttsManager.stop()
         val settings = _uiState.value.settings
         viewModelScope.launch {
             updateReaderSettings(settings.copy(readerModeEnabled = !settings.readerModeEnabled))

@@ -79,13 +79,11 @@ class NovelUpdateWorkerTest {
     private fun makeChapter(id: String = "ch-1") = Chapter(
         id = id,
         novelId = "novel-1",
-        title = "Chapter $id",
+        sourceId = "source-1",
         url = "https://example.com/chapter/$id",
-        number = 1.0,
-        uploadDate = null,
-        isRead = false,
-        isDownloaded = false,
-        localPath = null
+        title = "Chapter $id",
+        chapterNumber = 1f,
+        uploadedAt = null
     )
 
     // ── doWork returns success when backgroundUpdates disabled ────────────────

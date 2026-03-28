@@ -88,6 +88,20 @@ class DriveBackupManager @Inject constructor(
         chapterDao.upsertChapters(data.chapters)
         data.readerSettings.forEach { readerSettingsDao.upsertSettings(it) }
 
+        // Restore app preferences that were backed up
+        data.preferences["preferred_source"]
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { appPreferences.setPreferredSourceId(it) }
+        data.preferences["reader_font_size"]
+            ?.toFloatOrNull()
+            ?.let { appPreferences.setReaderFontSize(it) }
+        data.preferences["reader_theme"]
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { appPreferences.setReaderTheme(it) }
+        data.preferences["update_interval"]
+            ?.toIntOrNull()
+            ?.let { appPreferences.setUpdateIntervalHours(it) }
+
         data.novels.size
     }
 
@@ -126,7 +140,7 @@ class DriveBackupManager @Inject constructor(
 
         val response = okHttpClient.newCall(request).execute()
         val responseBody = response.body?.string() ?: error("Empty response from Drive")
-        if (!response.isSuccessful) error("Drive upload failed: ${response.code} $responseBody")
+        if (!response.isSuccessful) error("Drive upload failed (${response.code})")
         return JSONObject(responseBody).getString("id")
     }
 

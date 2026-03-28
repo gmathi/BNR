@@ -6,12 +6,14 @@ import android.speech.tts.UtteranceProgressListener
 import com.bnr.app.domain.model.TtsVoice
 import com.bnr.app.tts.TtsEngine
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -32,6 +34,9 @@ class AndroidTtsEngine @Inject constructor(
 
     private val _currentWordIndex = MutableStateFlow<Int?>(null)
     override val currentWordIndex: StateFlow<Int?> = _currentWordIndex.asStateFlow()
+
+    // Maps utterance ID → coroutine continuation so speak() can suspend until done
+    private val pendingContinuations = ConcurrentHashMap<String, CancellableContinuation<Unit>>()
 
     override suspend fun initialize(): Boolean = suspendCancellableCoroutine { continuation ->
         if (isInitialized && tts != null) {
@@ -58,12 +63,22 @@ class AndroidTtsEngine @Inject constructor(
             override fun onDone(utteranceId: String?) {
                 _isSpeaking.value = false
                 _currentWordIndex.value = null
+                utteranceId?.let { id ->
+                    pendingContinuations.remove(id)?.let { cont ->
+                        if (cont.isActive) cont.resume(Unit)
+                    }
+                }
             }
 
             @Deprecated("Deprecated in Java")
             override fun onError(utteranceId: String?) {
                 _isSpeaking.value = false
                 _currentWordIndex.value = null
+                utteranceId?.let { id ->
+                    pendingContinuations.remove(id)?.let { cont ->
+                        if (cont.isActive) cont.resume(Unit)
+                    }
+                }
             }
 
             override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
@@ -73,20 +88,28 @@ class AndroidTtsEngine @Inject constructor(
         })
     }
 
-    override suspend fun speak(text: String, voiceId: String?) {
-        if (!isInitialized) initialize()
-        val engine = tts ?: return
+    override suspend fun speak(text: String, voiceId: String?) = suspendCancellableCoroutine<Unit> { continuation ->
+        if (!isInitialized || tts == null) {
+            continuation.resume(Unit)
+            return@suspendCancellableCoroutine
+        }
+        val engine = tts!!
 
         voiceId?.let { id ->
             engine.voices?.find { it.name == id }?.let { engine.voice = it }
         }
 
-        engine.speak(
-            text,
-            TextToSpeech.QUEUE_FLUSH,
-            null,
-            UUID.randomUUID().toString()
-        )
+        val utteranceId = UUID.randomUUID().toString()
+        pendingContinuations[utteranceId] = continuation
+
+        // QUEUE_ADD so TtsManager controls sequencing; stop() clears the queue when cancelling
+        engine.speak(text, TextToSpeech.QUEUE_ADD, null, utteranceId)
+
+        continuation.invokeOnCancellation {
+            pendingContinuations.remove(utteranceId)
+            engine.stop()
+            _isSpeaking.value = false
+        }
     }
 
     override fun stop() {
