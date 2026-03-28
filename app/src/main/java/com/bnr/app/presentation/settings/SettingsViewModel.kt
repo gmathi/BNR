@@ -32,6 +32,7 @@ data class SettingsUiState(
     val selectedVoiceId: String? = null,
     val isLoadingVoices: Boolean = false,
     val appVersion: String = "",
+    val appTheme: String = "system",
     // Background updates
     val backgroundUpdatesEnabled: Boolean = true,
     val updateIntervalHours: Int = 6,
@@ -106,6 +107,11 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(driveAccountEmail = email) }
             }
         }
+        viewModelScope.launch {
+            appPreferences.appTheme.collect { theme ->
+                _uiState.update { it.copy(appTheme = theme) }
+            }
+        }
         loadVoices()
     }
 
@@ -141,6 +147,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             appPreferences.setDefaultTtsVoiceId(voiceId)
         }
+    }
+
+    // ── App theme ─────────────────────────────────────────────────────────────
+
+    fun onAppThemeChanged(theme: String) {
+        viewModelScope.launch { appPreferences.setAppTheme(theme) }
     }
 
     // ── Background updates ────────────────────────────────────────────────────

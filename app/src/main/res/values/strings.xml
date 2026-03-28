@@ -97,6 +97,28 @@
     <string name="settings_restore_success">Restore successful — %1$d novels restored</string>
     <string name="settings_backup_error">Backup failed: %1$s</string>
 
+    <!-- Appearance / App Theme -->
+    <string name="settings_appearance_section">Appearance</string>
+    <string name="settings_app_theme">App Theme</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_system">Follow System</string>
+
+    <!-- Reader Color Themes -->
+    <string name="reader_color_theme_section">Color Theme</string>
+    <string name="reader_theme_default">Default</string>
+    <string name="reader_theme_paper">Paper</string>
+    <string name="reader_theme_dark">Dark</string>
+    <string name="reader_theme_amoled">AMOLED</string>
+    <string name="reader_theme_solarized">Solarized</string>
+    <string name="reader_theme_forest">Forest</string>
+    <string name="reader_theme_night_blue">Night Blue</string>
+    <string name="reader_theme_custom">Custom</string>
+    <string name="reader_bg_color">Background</string>
+    <string name="reader_text_color">Text Color</string>
+    <string name="reader_line_spacing">Line Spacing</string>
+    <string name="reader_color_picker_title">Choose Color</string>
+
     <!-- Content descriptions -->
     <string name="cd_novel_cover">Novel cover image</string>
     <string name="cd_back">Back</string>

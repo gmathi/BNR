@@ -56,10 +56,16 @@ private val DarkColorScheme = darkColorScheme(
 
 @Composable
 fun BNRTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    appTheme: String = "system",
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    val darkTheme = when (appTheme) {
+        "light"  -> false
+        "dark"   -> true
+        else     -> isSystemInDarkTheme()  // "system" = follow OS
+    }
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current

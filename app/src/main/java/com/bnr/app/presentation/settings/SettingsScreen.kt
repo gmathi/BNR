@@ -22,6 +22,7 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -82,6 +83,30 @@ fun SettingsScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
+        // ── Appearance section ────────────────────────────────────────────────
+        SectionHeader(text = stringResource(R.string.settings_appearance_section))
+
+        val themeOptions = listOf(
+            "light"  to stringResource(R.string.settings_theme_light),
+            "dark"   to stringResource(R.string.settings_theme_dark),
+            "system" to stringResource(R.string.settings_theme_system)
+        )
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.settings_app_theme)) },
+            supportingContent = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    themeOptions.forEach { (key, label) ->
+                        FilterChip(
+                            selected = state.appTheme == key,
+                            onClick  = { viewModel.onAppThemeChanged(key) },
+                            label    = { Text(label) }
+                        )
+                    }
+                }
+            }
+        )
+        HorizontalDivider()
+
         // ── Download section ──────────────────────────────────────────────────
         SectionHeader(text = stringResource(R.string.settings_download_folder))
 

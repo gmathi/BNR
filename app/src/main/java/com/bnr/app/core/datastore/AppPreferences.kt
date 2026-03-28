@@ -22,6 +22,7 @@ class AppPreferences @Inject constructor(
         val KEY_PREFERRED_SOURCE_ID = stringPreferencesKey("preferred_source_id")
         val KEY_READER_FONT_SIZE    = floatPreferencesKey("reader_font_size")
         val KEY_READER_THEME        = stringPreferencesKey("reader_theme")  // "light", "dark", "system"
+        val KEY_APP_THEME           = stringPreferencesKey("app_theme")     // "light" | "dark" | "system"
         val KEY_DEFAULT_TTS_VOICE   = stringPreferencesKey("default_tts_voice")
         val KEY_DEFAULT_TTS_ENGINE  = stringPreferencesKey("default_tts_engine")
 
@@ -64,6 +65,12 @@ class AppPreferences @Inject constructor(
 
     suspend fun setReaderTheme(theme: String) =
         dataStore.edit { it[KEY_READER_THEME] = theme }
+
+    val appTheme: Flow<String> =
+        dataStore.data.map { it[KEY_APP_THEME] ?: "system" }
+
+    suspend fun setAppTheme(theme: String) =
+        dataStore.edit { it[KEY_APP_THEME] = theme }
 
     // ── TTS global defaults ──────────────────────────────────────────────────
 
