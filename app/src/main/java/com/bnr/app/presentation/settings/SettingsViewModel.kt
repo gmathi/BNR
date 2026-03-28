@@ -59,7 +59,7 @@ class SettingsViewModel @Inject constructor(
 
     init {
         val sources = sourceManager.getAllSources().map { it.id to it.name }
-        _uiState.update { it.copy(availableSources = sources) }
+        _uiState.update { it.copy(availableSources = sources, appVersion = BuildConfig.VERSION_NAME) }
 
         viewModelScope.launch {
             appPreferences.downloadFolderUri.collect { uri ->

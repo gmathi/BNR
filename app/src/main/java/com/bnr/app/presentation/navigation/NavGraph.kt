@@ -109,8 +109,8 @@ fun BNRNavGraph() {
                     navArgument("encodedUrl") { type = NavType.StringType }
                 )
             ) { backStackEntry ->
-                val sourceId   = backStackEntry.arguments!!.getString("sourceId")!!
-                val encodedUrl = backStackEntry.arguments!!.getString("encodedUrl")!!
+                val sourceId   = backStackEntry.arguments?.getString("sourceId") ?: ""
+                val encodedUrl = backStackEntry.arguments?.getString("encodedUrl") ?: ""
                 NovelDetailScreen(
                     sourceId   = sourceId,
                     novelUrl   = encodedUrl.decodeUrl(),
@@ -127,7 +127,7 @@ fun BNRNavGraph() {
                     navArgument("chapterId") { type = NavType.StringType }
                 )
             ) { backStackEntry ->
-                val encodedChapterId = backStackEntry.arguments!!.getString("chapterId")!!
+                val encodedChapterId = backStackEntry.arguments?.getString("chapterId") ?: ""
                 ReaderScreen(
                     chapterId = encodedChapterId.decodeUrl(),
                     onBack    = { navController.popBackStack() }

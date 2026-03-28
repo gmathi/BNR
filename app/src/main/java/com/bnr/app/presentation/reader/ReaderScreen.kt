@@ -85,7 +85,7 @@ fun ReaderScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = state.error!!,
+                            text = state.error.orEmpty(),
                             color = MaterialTheme.colorScheme.error
                         )
                     }

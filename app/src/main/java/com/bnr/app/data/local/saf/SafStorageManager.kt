@@ -37,8 +37,8 @@ class SafStorageManager @Inject constructor(
     ): String? = withContext(Dispatchers.IO) {
         runCatching {
             val rootUri = Uri.parse(rootUriString)
-            val novelsDir = getOrCreateDir(DocumentFile.fromTreeUri(context, rootUri)!!, "novels")
-                ?: return@runCatching null
+            val rootDoc = DocumentFile.fromTreeUri(context, rootUri) ?: return@runCatching null
+            val novelsDir = getOrCreateDir(rootDoc, "novels") ?: return@runCatching null
             val novelDir = getOrCreateDir(novelsDir, sanitizeName(novelId))
                 ?: return@runCatching null
 

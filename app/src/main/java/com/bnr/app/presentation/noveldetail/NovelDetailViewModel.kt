@@ -44,7 +44,7 @@ class NovelDetailViewModel @Inject constructor(
 
     private val sourceId: String = savedStateHandle["sourceId"] ?: ""
     private val novelUrl: String = savedStateHandle["encodedUrl"]?.let {
-        java.net.URLDecoder.decode(it, "UTF-8")
+        runCatching { java.net.URLDecoder.decode(it, "UTF-8") }.getOrDefault(it)
     } ?: ""
 
     private val _uiState = MutableStateFlow(NovelDetailUiState())

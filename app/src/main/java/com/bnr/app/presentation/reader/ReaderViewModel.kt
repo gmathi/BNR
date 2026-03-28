@@ -44,7 +44,7 @@ class ReaderViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val chapterId: String = savedStateHandle["chapterId"]?.let {
-        java.net.URLDecoder.decode(it, "UTF-8")
+        runCatching { java.net.URLDecoder.decode(it, "UTF-8") }.getOrDefault(it)
     } ?: ""
 
     private val _uiState = MutableStateFlow(ReaderUiState())
