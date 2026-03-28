@@ -6,11 +6,13 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bnr.app.BuildConfig
+import com.bnr.app.core.backup.DriveBackupManager
 import com.bnr.app.core.datastore.AppPreferences
 import com.bnr.app.data.local.saf.SafStorageManager
 import com.bnr.app.domain.model.TtsVoice
 import com.bnr.app.source.SourceManager
 import com.bnr.app.tts.TtsManager
+import com.bnr.app.worker.UpdateScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,7 +31,17 @@ data class SettingsUiState(
     val availableVoices: List<TtsVoice> = emptyList(),
     val selectedVoiceId: String? = null,
     val isLoadingVoices: Boolean = false,
-    val appVersion: String = ""
+    val appVersion: String = "",
+    // Background updates
+    val backgroundUpdatesEnabled: Boolean = true,
+    val updateIntervalHours: Int = 6,
+    // Drive backup
+    val driveBackupEnabled: Boolean = false,
+    val lastBackupTime: Long? = null,
+    val driveAccountEmail: String? = null,
+    val isBackingUp: Boolean = false,
+    val isRestoring: Boolean = false,
+    val backupError: String? = null
 )
 
 @HiltViewModel
@@ -37,7 +49,9 @@ class SettingsViewModel @Inject constructor(
     private val appPreferences: AppPreferences,
     private val safStorageManager: SafStorageManager,
     private val sourceManager: SourceManager,
-    private val ttsManager: TtsManager
+    private val ttsManager: TtsManager,
+    private val updateScheduler: UpdateScheduler,
+    private val driveBackupManager: DriveBackupManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -65,6 +79,31 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             appPreferences.defaultTtsVoiceId.collect { id ->
                 _uiState.update { it.copy(selectedVoiceId = id) }
+            }
+        }
+        viewModelScope.launch {
+            appPreferences.backgroundUpdatesEnabled.collect { enabled ->
+                _uiState.update { it.copy(backgroundUpdatesEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            appPreferences.updateIntervalHours.collect { hours ->
+                _uiState.update { it.copy(updateIntervalHours = hours) }
+            }
+        }
+        viewModelScope.launch {
+            appPreferences.driveBackupEnabled.collect { enabled ->
+                _uiState.update { it.copy(driveBackupEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            appPreferences.lastBackupTimeMs.collect { ms ->
+                _uiState.update { it.copy(lastBackupTime = ms) }
+            }
+        }
+        viewModelScope.launch {
+            appPreferences.driveAccountEmail.collect { email ->
+                _uiState.update { it.copy(driveAccountEmail = email) }
             }
         }
         loadVoices()
@@ -101,6 +140,66 @@ class SettingsViewModel @Inject constructor(
     fun onVoiceSelected(voiceId: String) {
         viewModelScope.launch {
             appPreferences.setDefaultTtsVoiceId(voiceId)
+        }
+    }
+
+    // ── Background updates ────────────────────────────────────────────────────
+
+    fun onBackgroundUpdatesToggled(enabled: Boolean) {
+        viewModelScope.launch {
+            appPreferences.setBackgroundUpdatesEnabled(enabled)
+            if (enabled) {
+                updateScheduler.schedule(_uiState.value.updateIntervalHours)
+            } else {
+                updateScheduler.cancel()
+            }
+        }
+    }
+
+    fun onUpdateIntervalChanged(hours: Int) {
+        viewModelScope.launch {
+            appPreferences.setUpdateIntervalHours(hours)
+            if (_uiState.value.backgroundUpdatesEnabled) {
+                updateScheduler.schedule(hours)
+            }
+        }
+    }
+
+    // ── Drive backup ──────────────────────────────────────────────────────────
+
+    fun onDriveBackupToggled(enabled: Boolean) {
+        viewModelScope.launch {
+            appPreferences.setDriveBackupEnabled(enabled)
+        }
+    }
+
+    fun onBackupNow(accessToken: String, email: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isBackingUp = true, backupError = null) }
+            val result = driveBackupManager.backup(accessToken, email)
+            result.fold(
+                onSuccess = { info ->
+                    _uiState.update { it.copy(isBackingUp = false, lastBackupTime = info.timestamp) }
+                },
+                onFailure = { error ->
+                    _uiState.update { it.copy(isBackingUp = false, backupError = error.message) }
+                }
+            )
+        }
+    }
+
+    fun onRestoreFromDrive(accessToken: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRestoring = true, backupError = null) }
+            val result = driveBackupManager.restore(accessToken)
+            result.fold(
+                onSuccess = {
+                    _uiState.update { it.copy(isRestoring = false) }
+                },
+                onFailure = { error ->
+                    _uiState.update { it.copy(isRestoring = false, backupError = error.message) }
+                }
+            )
         }
     }
 }

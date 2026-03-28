@@ -106,7 +106,8 @@ fun LibraryScreen(
                         NovelCard(
                             novel = novel,
                             onClick = { onNovelClick(novel) },
-                            inLibrary = false
+                            inLibrary = false,
+                            newChaptersCount = uiState.updateInfoMap[novel.id]?.newChapterCount ?: 0
                         )
                     }
                 }

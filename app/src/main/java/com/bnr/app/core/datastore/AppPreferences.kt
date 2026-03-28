@@ -3,7 +3,10 @@ package com.bnr.app.core.datastore
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -21,6 +24,15 @@ class AppPreferences @Inject constructor(
         val KEY_READER_THEME        = stringPreferencesKey("reader_theme")  // "light", "dark", "system"
         val KEY_DEFAULT_TTS_VOICE   = stringPreferencesKey("default_tts_voice")
         val KEY_DEFAULT_TTS_ENGINE  = stringPreferencesKey("default_tts_engine")
+
+        // Background updates
+        val KEY_BACKGROUND_UPDATES_ENABLED = booleanPreferencesKey("background_updates_enabled")
+        val KEY_UPDATE_INTERVAL_HOURS      = intPreferencesKey("update_interval_hours")
+
+        // Drive backup
+        val KEY_DRIVE_BACKUP_ENABLED = booleanPreferencesKey("drive_backup_enabled")
+        val KEY_LAST_BACKUP_TIME_MS  = longPreferencesKey("last_backup_time_ms")
+        val KEY_DRIVE_ACCOUNT_EMAIL  = stringPreferencesKey("drive_account_email")
     }
 
     // ── Download folder ──────────────────────────────────────────────────────
@@ -66,4 +78,38 @@ class AppPreferences @Inject constructor(
 
     suspend fun setDefaultTtsEngineId(engineId: String) =
         dataStore.edit { it[KEY_DEFAULT_TTS_ENGINE] = engineId }
+
+    // ── Background updates ───────────────────────────────────────────────────
+
+    val backgroundUpdatesEnabled: Flow<Boolean> =
+        dataStore.data.map { it[KEY_BACKGROUND_UPDATES_ENABLED] ?: true }
+
+    suspend fun setBackgroundUpdatesEnabled(enabled: Boolean) =
+        dataStore.edit { it[KEY_BACKGROUND_UPDATES_ENABLED] = enabled }
+
+    val updateIntervalHours: Flow<Int> =
+        dataStore.data.map { it[KEY_UPDATE_INTERVAL_HOURS] ?: 6 }
+
+    suspend fun setUpdateIntervalHours(hours: Int) =
+        dataStore.edit { it[KEY_UPDATE_INTERVAL_HOURS] = hours }
+
+    // ── Drive backup ─────────────────────────────────────────────────────────
+
+    val driveBackupEnabled: Flow<Boolean> =
+        dataStore.data.map { it[KEY_DRIVE_BACKUP_ENABLED] ?: false }
+
+    suspend fun setDriveBackupEnabled(enabled: Boolean) =
+        dataStore.edit { it[KEY_DRIVE_BACKUP_ENABLED] = enabled }
+
+    val lastBackupTimeMs: Flow<Long?> =
+        dataStore.data.map { it[KEY_LAST_BACKUP_TIME_MS] }
+
+    suspend fun setLastBackupTimeMs(ms: Long) =
+        dataStore.edit { it[KEY_LAST_BACKUP_TIME_MS] = ms }
+
+    val driveAccountEmail: Flow<String?> =
+        dataStore.data.map { it[KEY_DRIVE_ACCOUNT_EMAIL] }
+
+    suspend fun setDriveAccountEmail(email: String) =
+        dataStore.edit { it[KEY_DRIVE_ACCOUNT_EMAIL] = email }
 }

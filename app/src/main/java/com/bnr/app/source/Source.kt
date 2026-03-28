@@ -32,7 +32,19 @@ interface Source {
     suspend fun getChapterContent(chapterUrl: String): SourceResult<ChapterContent>
 
     suspend fun getAvailableFilters(): List<SourceFilter> = emptyList()
+
+    /**
+     * Rate limit hint for background update workers.
+     * The worker will pause [delayBetweenBatchesMs] after every [requestsPerBatch] requests to this source.
+     */
+    val rateLimit: RateLimit get() = RateLimit()
 }
+
+/** How fast the worker may hammer this source. Defaults are conservative. */
+data class RateLimit(
+    val requestsPerBatch: Int = 5,
+    val delayBetweenBatchesMs: Long = 3_000L
+)
 
 data class SourceFilter(
     val key: String,

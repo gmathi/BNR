@@ -3,7 +3,9 @@ package com.bnr.app.presentation.library
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bnr.app.domain.model.Novel
+import com.bnr.app.domain.model.NovelUpdateInfo
 import com.bnr.app.domain.usecase.GetLibraryNovelsUseCase
+import com.bnr.app.domain.usecase.GetNovelUpdatesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,12 +23,14 @@ data class LibraryUiState(
     val displayedNovels: List<Novel> = emptyList(),
     val allNovels: List<Novel> = emptyList(),
     val searchQuery: String = "",
-    val sortOption: LibrarySortOption = LibrarySortOption.DATE_ADDED
+    val sortOption: LibrarySortOption = LibrarySortOption.DATE_ADDED,
+    val updateInfoMap: Map<String, NovelUpdateInfo> = emptyMap()
 )
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
-    getLibraryNovels: GetLibraryNovelsUseCase
+    getLibraryNovels: GetLibraryNovelsUseCase,
+    getNovelUpdates: GetNovelUpdatesUseCase
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -35,8 +39,9 @@ class LibraryViewModel @Inject constructor(
     val uiState: StateFlow<LibraryUiState> = combine(
         getLibraryNovels(),
         _searchQuery,
-        _sortOption
-    ) { novels, query, sort ->
+        _sortOption,
+        getNovelUpdates()
+    ) { novels, query, sort, updates ->
         val filtered = if (query.isBlank()) novels
         else novels.filter { novel ->
             novel.title.contains(query, ignoreCase = true) ||
@@ -53,7 +58,8 @@ class LibraryViewModel @Inject constructor(
             displayedNovels = sorted,
             allNovels = novels,
             searchQuery = query,
-            sortOption = sort
+            sortOption = sort,
+            updateInfoMap = updates.associateBy { it.novelId }
         )
     }.stateIn(
         scope = viewModelScope,

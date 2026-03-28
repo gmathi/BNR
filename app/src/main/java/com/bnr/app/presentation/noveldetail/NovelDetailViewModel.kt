@@ -9,6 +9,7 @@ import com.bnr.app.domain.usecase.AddNovelToLibraryUseCase
 import com.bnr.app.domain.usecase.DownloadChapterUseCase
 import com.bnr.app.domain.usecase.GetChapterListUseCase
 import com.bnr.app.domain.usecase.GetNovelDetailUseCase
+import com.bnr.app.domain.usecase.MarkNovelUpdatesSeenUseCase
 import com.bnr.app.domain.usecase.RemoveNovelFromLibraryUseCase
 import com.bnr.app.domain.repository.ChapterRepository
 import com.bnr.app.source.SourceResult
@@ -37,6 +38,7 @@ class NovelDetailViewModel @Inject constructor(
     private val removeFromLibrary: RemoveNovelFromLibraryUseCase,
     private val downloadChapter: DownloadChapterUseCase,
     private val chapterRepository: ChapterRepository,
+    private val markNovelUpdatesSeen: MarkNovelUpdatesSeenUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -62,6 +64,9 @@ class NovelDetailViewModel @Inject constructor(
                         inLibrary = result.data.inLibrary,
                         isLoadingDetail = false
                     )}
+                    viewModelScope.launch {
+                        markNovelUpdatesSeen(result.data.id)
+                    }
                     loadChapters(result.data)
                 }
                 is SourceResult.Error -> _uiState.update {

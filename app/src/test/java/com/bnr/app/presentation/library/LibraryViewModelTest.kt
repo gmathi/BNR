@@ -4,7 +4,9 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import app.cash.turbine.test
 import com.bnr.app.domain.model.Novel
 import com.bnr.app.domain.model.NovelStatus
+import com.bnr.app.domain.model.NovelUpdateInfo
 import com.bnr.app.domain.usecase.GetLibraryNovelsUseCase
+import com.bnr.app.domain.usecase.GetNovelUpdatesUseCase
 import com.bnr.app.domain.usecase.makeNovel
 import com.bnr.app.presentation.MainDispatcherRule
 import io.mockk.every
@@ -33,10 +35,26 @@ class LibraryViewModelTest {
     val instantTask = InstantTaskExecutorRule()
 
     private val getLibraryNovels: GetLibraryNovelsUseCase = mockk(relaxed = true)
+    private val getNovelUpdates: GetNovelUpdatesUseCase = mockk(relaxed = true)
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private fun createViewModel(): LibraryViewModel = LibraryViewModel(getLibraryNovels)
+    private fun makeUpdateInfo(
+        novelId: String,
+        newChapterCount: Int = 0,
+        knownChapterCount: Int = 10
+    ) = NovelUpdateInfo(
+        novelId = novelId,
+        newChapterCount = newChapterCount,
+        knownChapterCount = knownChapterCount,
+        lastCheckedAt = 1_000L,
+        lastUpdatedAt = null
+    )
+
+    private fun createViewModel(): LibraryViewModel = LibraryViewModel(
+        getLibraryNovels,
+        getNovelUpdates
+    )
 
     // ── Tests ─────────────────────────────────────────────────────────────────
 
@@ -44,6 +62,7 @@ class LibraryViewModelTest {
     fun `initial state has empty displayedNovels, blank searchQuery, and DATE_ADDED sort`() =
         runTest(UnconfinedTestDispatcher()) {
             every { getLibraryNovels() } returns flow { awaitCancellation() }
+            every { getNovelUpdates() } returns flow { awaitCancellation() }
 
             val vm = createViewModel()
 
@@ -64,6 +83,7 @@ class LibraryViewModelTest {
             val cultivation = makeNovel(id = "src::2", title = "Cultivation Chat Group", author = "Author Y")
             val libraryFlow = MutableStateFlow<List<Novel>>(listOf(shadowSlave, cultivation))
             every { getLibraryNovels() } returns libraryFlow
+            every { getNovelUpdates() } returns MutableStateFlow(emptyList())
 
             val vm = createViewModel()
 
@@ -89,6 +109,7 @@ class LibraryViewModelTest {
             val novel3 = makeNovel(id = "src::3", title = "Novel Three", author = "Author1")
             val libraryFlow = MutableStateFlow<List<Novel>>(listOf(novel1, novel2, novel3))
             every { getLibraryNovels() } returns libraryFlow
+            every { getNovelUpdates() } returns MutableStateFlow(emptyList())
 
             val vm = createViewModel()
 
@@ -112,6 +133,7 @@ class LibraryViewModelTest {
             val novel2 = makeNovel(id = "src::2", title = "Cultivation Chat Group", author = "Author Y")
             val libraryFlow = MutableStateFlow<List<Novel>>(listOf(novel1, novel2))
             every { getLibraryNovels() } returns libraryFlow
+            every { getNovelUpdates() } returns MutableStateFlow(emptyList())
 
             val vm = createViewModel()
 
@@ -138,6 +160,7 @@ class LibraryViewModelTest {
             val middle = makeNovel(id = "src::3", title = "Middle", addedToLibraryAt = 2_000L)
             val libraryFlow = MutableStateFlow<List<Novel>>(listOf(older, newest, middle))
             every { getLibraryNovels() } returns libraryFlow
+            every { getNovelUpdates() } returns MutableStateFlow(emptyList())
 
             val vm = createViewModel()
 
@@ -161,6 +184,7 @@ class LibraryViewModelTest {
             val bravo   = makeNovel(id = "src::3", title = "Bravo")
             val libraryFlow = MutableStateFlow<List<Novel>>(listOf(charlie, alpha, bravo))
             every { getLibraryNovels() } returns libraryFlow
+            every { getNovelUpdates() } returns MutableStateFlow(emptyList())
 
             val vm = createViewModel()
 
@@ -184,6 +208,7 @@ class LibraryViewModelTest {
             val bravo   = makeNovel(id = "src::3", title = "Bravo")
             val libraryFlow = MutableStateFlow<List<Novel>>(listOf(charlie, alpha, bravo))
             every { getLibraryNovels() } returns libraryFlow
+            every { getNovelUpdates() } returns MutableStateFlow(emptyList())
 
             val vm = createViewModel()
 
@@ -207,6 +232,7 @@ class LibraryViewModelTest {
             val novelB = makeNovel(id = "src::3", title = "Novel B", author = "Bob Lee")
             val libraryFlow = MutableStateFlow<List<Novel>>(listOf(novelC, novelA, novelB))
             every { getLibraryNovels() } returns libraryFlow
+            every { getNovelUpdates() } returns MutableStateFlow(emptyList())
 
             val vm = createViewModel()
 
@@ -231,6 +257,7 @@ class LibraryViewModelTest {
             val hiatus    = makeNovel(id = "src::4", title = "Hiatus",    status = NovelStatus.HIATUS)
             val libraryFlow = MutableStateFlow<List<Novel>>(listOf(unknown, completed, ongoing, hiatus))
             every { getLibraryNovels() } returns libraryFlow
+            every { getNovelUpdates() } returns MutableStateFlow(emptyList())
 
             val vm = createViewModel()
 
@@ -258,6 +285,7 @@ class LibraryViewModelTest {
             val cultivation  = makeNovel(id = "src::3", title = "Cultivation Chat Group", author = "Author C")
             val libraryFlow = MutableStateFlow<List<Novel>>(listOf(shadowSlave, shadowMaster, cultivation))
             every { getLibraryNovels() } returns libraryFlow
+            every { getNovelUpdates() } returns MutableStateFlow(emptyList())
 
             val vm = createViewModel()
 
@@ -283,6 +311,7 @@ class LibraryViewModelTest {
     fun `onSortOptionSelected updates sortOption in state`() =
         runTest(UnconfinedTestDispatcher()) {
             every { getLibraryNovels() } returns flow { awaitCancellation() }
+            every { getNovelUpdates() } returns flow { awaitCancellation() }
 
             val vm = createViewModel()
 
@@ -302,6 +331,7 @@ class LibraryViewModelTest {
     fun `onSearchQueryChanged updates searchQuery in state`() =
         runTest(UnconfinedTestDispatcher()) {
             every { getLibraryNovels() } returns flow { awaitCancellation() }
+            every { getNovelUpdates() } returns flow { awaitCancellation() }
 
             val vm = createViewModel()
 
@@ -325,6 +355,7 @@ class LibraryViewModelTest {
             val novel3 = makeNovel(id = "src::3", title = "Omniscient Reader",      author = "Author Z")
             val libraryFlow = MutableStateFlow<List<Novel>>(listOf(novel1, novel2, novel3))
             every { getLibraryNovels() } returns libraryFlow
+            every { getNovelUpdates() } returns MutableStateFlow(emptyList())
 
             val vm = createViewModel()
 
@@ -337,6 +368,131 @@ class LibraryViewModelTest {
 
                 assertEquals(1, state.displayedNovels.size)
                 assertEquals(3, state.allNovels.size)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    // ── updateInfoMap tests ───────────────────────────────────────────────────
+
+    @Test
+    fun `updateInfoMap populated from GetNovelUpdatesUseCase`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val novel = makeNovel(id = "src::1", title = "Shadow Slave")
+            val update = makeUpdateInfo(novelId = "src::1", newChapterCount = 3)
+            every { getLibraryNovels() } returns MutableStateFlow(listOf(novel))
+            every { getNovelUpdates() } returns MutableStateFlow(listOf(update))
+
+            val vm = createViewModel()
+
+            vm.uiState.test {
+                var state = awaitItem()
+                if (state.updateInfoMap.isEmpty()) state = awaitItem()
+
+                assertTrue(state.updateInfoMap.isNotEmpty())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `updateInfoMap keyed by novelId`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val novel1 = makeNovel(id = "src::1", title = "Novel One")
+            val novel2 = makeNovel(id = "src::2", title = "Novel Two")
+            val update1 = makeUpdateInfo(novelId = "src::1", newChapterCount = 2)
+            val update2 = makeUpdateInfo(novelId = "src::2", newChapterCount = 5)
+            every { getLibraryNovels() } returns MutableStateFlow(listOf(novel1, novel2))
+            every { getNovelUpdates() } returns MutableStateFlow(listOf(update1, update2))
+
+            val vm = createViewModel()
+
+            vm.uiState.test {
+                var state = awaitItem()
+                if (state.updateInfoMap.size < 2) state = awaitItem()
+
+                assertEquals(2, state.updateInfoMap.size)
+                assertTrue(state.updateInfoMap.containsKey("src::1"))
+                assertTrue(state.updateInfoMap.containsKey("src::2"))
+                assertEquals(update1, state.updateInfoMap["src::1"])
+                assertEquals(update2, state.updateInfoMap["src::2"])
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `updateInfoMap empty when no updates`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val novel = makeNovel(id = "src::1", title = "Shadow Slave")
+            every { getLibraryNovels() } returns MutableStateFlow(listOf(novel))
+            every { getNovelUpdates() } returns MutableStateFlow(emptyList())
+
+            val vm = createViewModel()
+
+            vm.uiState.test {
+                var state = awaitItem()
+                if (state.allNovels.isEmpty()) state = awaitItem()
+
+                assertTrue(state.updateInfoMap.isEmpty())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `novel with 5 new chapters has newChapterCount=5 in updateInfoMap`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val novel = makeNovel(id = "src::42", title = "Rising Warrior")
+            val update = makeUpdateInfo(novelId = "src::42", newChapterCount = 5)
+            every { getLibraryNovels() } returns MutableStateFlow(listOf(novel))
+            every { getNovelUpdates() } returns MutableStateFlow(listOf(update))
+
+            val vm = createViewModel()
+
+            vm.uiState.test {
+                var state = awaitItem()
+                if (state.updateInfoMap.isEmpty()) state = awaitItem()
+
+                val info = state.updateInfoMap["src::42"]
+                assertEquals(5, info?.newChapterCount)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `combine filter+sort+updates all applied simultaneously`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val shadowMaster = makeNovel(id = "src::1", title = "Shadow Master", author = "Author A")
+            val shadowSlave  = makeNovel(id = "src::2", title = "Shadow Slave",  author = "Author B")
+            val cultivation  = makeNovel(id = "src::3", title = "Cultivation Chat Group", author = "Author C")
+
+            val update1 = makeUpdateInfo(novelId = "src::1", newChapterCount = 3)
+            val update2 = makeUpdateInfo(novelId = "src::2", newChapterCount = 7)
+
+            val libraryFlow = MutableStateFlow<List<Novel>>(listOf(shadowSlave, shadowMaster, cultivation))
+            val updatesFlow = MutableStateFlow<List<NovelUpdateInfo>>(listOf(update1, update2))
+            every { getLibraryNovels() } returns libraryFlow
+            every { getNovelUpdates() } returns updatesFlow
+
+            val vm = createViewModel()
+
+            vm.uiState.test {
+                var state = awaitItem()
+                if (state.displayedNovels.isEmpty()) state = awaitItem()
+
+                // Apply sort and search filter
+                vm.onSortOptionSelected(LibrarySortOption.TITLE_AZ)
+                state = awaitItem()
+                vm.onSearchQueryChanged("shadow")
+                state = awaitItem()
+
+                // displayedNovels: filtered to "shadow" novels, sorted AZ
+                assertEquals(2, state.displayedNovels.size)
+                assertEquals(shadowMaster, state.displayedNovels[0])
+                assertEquals(shadowSlave,  state.displayedNovels[1])
+
+                // updateInfoMap: still contains all updates regardless of filter
+                assertEquals(2, state.updateInfoMap.size)
+                assertEquals(3, state.updateInfoMap["src::1"]?.newChapterCount)
+                assertEquals(7, state.updateInfoMap["src::2"]?.newChapterCount)
+
                 cancelAndIgnoreRemainingEvents()
             }
         }

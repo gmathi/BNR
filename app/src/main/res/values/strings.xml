@@ -74,6 +74,29 @@
     <string name="error_rate_limit">Rate limited. Please wait before trying again.</string>
     <string name="error_no_download_folder">Please select a download folder in Settings first.</string>
 
+    <!-- Background Updates -->
+    <string name="settings_updates_section">Background Updates</string>
+    <string name="settings_updates_enabled">Check for new chapters</string>
+    <string name="settings_updates_interval">Check interval</string>
+    <string name="settings_updates_interval_1h">Every hour</string>
+    <string name="settings_updates_interval_3h">Every 3 hours</string>
+    <string name="settings_updates_interval_6h">Every 6 hours</string>
+    <string name="settings_updates_interval_12h">Every 12 hours</string>
+    <string name="settings_updates_interval_24h">Daily</string>
+
+    <!-- Google Drive Backup -->
+    <string name="settings_backup_section">Google Drive Backup</string>
+    <string name="settings_backup_enabled">Enable cloud backup</string>
+    <string name="settings_backup_now">Back Up Now</string>
+    <string name="settings_restore">Restore from Drive</string>
+    <string name="settings_last_backup">Last backup: %1$s</string>
+    <string name="settings_never_backed_up">Never backed up</string>
+    <string name="settings_backing_up">Backing up\u2026</string>
+    <string name="settings_restoring">Restoring\u2026</string>
+    <string name="settings_backup_success">Backup successful</string>
+    <string name="settings_restore_success">Restore successful — %1$d novels restored</string>
+    <string name="settings_backup_error">Backup failed: %1$s</string>
+
     <!-- Content descriptions -->
     <string name="cd_novel_cover">Novel cover image</string>
     <string name="cd_back">Back</string>

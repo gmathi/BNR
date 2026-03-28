@@ -6,6 +6,7 @@ import com.bnr.app.data.local.db.BNRDatabase
 import com.bnr.app.data.local.db.dao.ChapterDao
 import com.bnr.app.data.local.db.dao.DownloadDao
 import com.bnr.app.data.local.db.dao.NovelDao
+import com.bnr.app.data.local.db.dao.NovelUpdateDao
 import com.bnr.app.data.local.db.dao.ReaderSettingsDao
 import dagger.Module
 import dagger.Provides
@@ -22,7 +23,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): BNRDatabase =
         Room.databaseBuilder(context, BNRDatabase::class.java, "bnr.db")
-            .fallbackToDestructiveMigration()
+            .addMigrations(BNRDatabase.MIGRATION_1_2)
             .build()
 
     @Provides
@@ -36,4 +37,7 @@ object DatabaseModule {
 
     @Provides
     fun provideReaderSettingsDao(db: BNRDatabase): ReaderSettingsDao = db.readerSettingsDao()
+
+    @Provides
+    fun provideNovelUpdateDao(db: BNRDatabase): NovelUpdateDao = db.novelUpdateDao()
 }

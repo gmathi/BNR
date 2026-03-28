@@ -98,6 +98,13 @@ dependencies {
     // Coroutines
     implementation(libs.coroutines.android)
 
+    // Google Drive backup
+    implementation(libs.play.services.auth)
+    implementation(libs.credentials)
+    implementation(libs.credentials.play.services)
+    implementation(libs.google.id)
+    implementation(libs.gson)
+
     // Testing — unit
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

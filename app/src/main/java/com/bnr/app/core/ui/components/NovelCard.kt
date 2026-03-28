@@ -33,7 +33,8 @@ fun NovelCard(
     novel: Novel,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    inLibrary: Boolean = false
+    inLibrary: Boolean = false,
+    newChaptersCount: Int = 0
 ) {
     Card(
         modifier = modifier
@@ -67,6 +68,23 @@ fun NovelCard(
                             contentDescription = stringResource(R.string.cd_in_library),
                             tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+                if (newChaptersCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .background(
+                                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.92f),
+                                shape = RoundedCornerShape(topEnd = 8.dp)
+                            )
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "+$newChaptersCount",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onTertiary
                         )
                     }
                 }
