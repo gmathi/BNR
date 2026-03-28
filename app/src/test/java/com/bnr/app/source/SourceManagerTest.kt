@@ -1,8 +1,5 @@
 package com.bnr.app.source
 
-import com.bnr.app.domain.model.Chapter
-import com.bnr.app.domain.model.ChapterContent
-import com.bnr.app.domain.model.Novel
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
