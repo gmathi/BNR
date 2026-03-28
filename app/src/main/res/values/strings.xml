@@ -10,6 +10,14 @@
     <!-- Library -->
     <string name="library_empty_title">Your library is empty</string>
     <string name="library_empty_subtitle">Search for novels and add them to your library</string>
+    <string name="library_search_hint">Search in library…</string>
+    <string name="library_sort_by">Sort by</string>
+    <string name="library_sort_date_added">Date Added</string>
+    <string name="library_sort_title_az">Title A–Z</string>
+    <string name="library_sort_title_za">Title Z–A</string>
+    <string name="library_sort_author">Author</string>
+    <string name="library_sort_status">Status</string>
+    <string name="library_no_results">No novels match your search</string>
 
     <!-- Search -->
     <string name="search_hint">Search novels…</string>
@@ -17,6 +25,8 @@
     <string name="search_results">Results</string>
     <string name="search_no_results">No results found</string>
     <string name="search_source_label">Source</string>
+    <string name="search_load_more">Load more</string>
+    <string name="search_source_no_results">No results from this source</string>
 
     <!-- Novel Detail -->
     <string name="detail_add_library">Add to Library</string>
@@ -68,4 +78,7 @@
     <string name="cd_novel_cover">Novel cover image</string>
     <string name="cd_back">Back</string>
     <string name="cd_more_options">More options</string>
+    <string name="cd_in_library">In library</string>
+    <string name="cd_sort">Sort options</string>
+    <string name="cd_clear_search">Clear search</string>
 </resources>
