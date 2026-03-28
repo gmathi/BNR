@@ -98,9 +98,18 @@ dependencies {
     // Coroutines
     implementation(libs.coroutines.android)
 
-    // Testing
+    // Testing — unit
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.turbine)
+    testImplementation(libs.arch.core.testing)
+    testImplementation(libs.mockwebserver)
+
+    // Testing — instrumented / Android
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.espresso.core)
+    androidTestImplementation(libs.mockk.android)
+    androidTestImplementation(libs.room.testing)
     androidTestImplementation(platform(libs.compose.bom))
 }
