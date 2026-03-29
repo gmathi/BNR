@@ -80,11 +80,17 @@ fun makeReaderSettings(
     readerModeEnabled: Boolean = true,
     fontSize: Float = 16f,
     ttsVoiceId: String? = null,
-    ttsEngineId: String = "android"
+    ttsEngineId: String = "android",
+    readerColorPreset: String = "default",
+    customBgColor: Long? = null,
+    customTextColor: Long? = null
 ): NovelReaderSettings = NovelReaderSettings(
     novelId = novelId,
     readerModeEnabled = readerModeEnabled,
     fontSize = fontSize,
     ttsVoiceId = ttsVoiceId,
-    ttsEngineId = ttsEngineId
+    ttsEngineId = ttsEngineId,
+    readerColorPreset = readerColorPreset,
+    customBgColor = customBgColor,
+    customTextColor = customTextColor
 )

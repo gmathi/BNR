@@ -20,5 +20,8 @@ data class NovelReaderSettingsEntity(
     val readerModeEnabled: Boolean = true,
     val fontSize: Float = 16f,
     val ttsVoiceId: String? = null,
-    val ttsEngineId: String = "android"
+    val ttsEngineId: String = "android",
+    val readerColorPreset: String = "default",   // key from ReaderColorPreset
+    val customBgColor: Long? = null,             // ARGB as Long, only if preset=custom
+    val customTextColor: Long? = null            // ARGB as Long, only if preset=custom
 )

@@ -78,7 +78,10 @@ fun NovelReaderSettingsEntity.toDomain(): NovelReaderSettings = NovelReaderSetti
     readerModeEnabled = readerModeEnabled,
     fontSize = fontSize,
     ttsVoiceId = ttsVoiceId,
-    ttsEngineId = ttsEngineId
+    ttsEngineId = ttsEngineId,
+    readerColorPreset = readerColorPreset,
+    customBgColor = customBgColor,
+    customTextColor = customTextColor
 )
 
 fun NovelReaderSettings.toEntity(): NovelReaderSettingsEntity = NovelReaderSettingsEntity(
@@ -86,7 +89,10 @@ fun NovelReaderSettings.toEntity(): NovelReaderSettingsEntity = NovelReaderSetti
     readerModeEnabled = readerModeEnabled,
     fontSize = fontSize,
     ttsVoiceId = ttsVoiceId,
-    ttsEngineId = ttsEngineId
+    ttsEngineId = ttsEngineId,
+    readerColorPreset = readerColorPreset,
+    customBgColor = customBgColor,
+    customTextColor = customTextColor
 )
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

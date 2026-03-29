@@ -110,6 +110,27 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    fun updateColorPreset(preset: String) {
+        val settings = _uiState.value.settings
+        viewModelScope.launch {
+            updateReaderSettings(settings.copy(readerColorPreset = preset))
+        }
+    }
+
+    fun updateCustomBgColor(colorArgb: Long) {
+        val settings = _uiState.value.settings
+        viewModelScope.launch {
+            updateReaderSettings(settings.copy(customBgColor = colorArgb))
+        }
+    }
+
+    fun updateCustomTextColor(colorArgb: Long) {
+        val settings = _uiState.value.settings
+        viewModelScope.launch {
+            updateReaderSettings(settings.copy(customTextColor = colorArgb))
+        }
+    }
+
     fun toggleSettingsSheet() {
         _uiState.update { it.copy(showSettingsSheet = !it.showSettingsSheet) }
     }

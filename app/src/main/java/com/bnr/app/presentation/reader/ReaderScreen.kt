@@ -18,17 +18,15 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.isSystemInDarkTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bnr.app.R
 import com.bnr.app.core.ui.components.FullScreenLoading
-import com.bnr.app.core.ui.theme.ReaderBackground
-import com.bnr.app.core.ui.theme.ReaderBackgroundDark
-import com.bnr.app.core.ui.theme.ReaderText
-import com.bnr.app.core.ui.theme.ReaderTextDark
+import com.bnr.app.core.ui.theme.ReaderColorPreset
+import com.bnr.app.core.ui.theme.toColors
 import com.bnr.app.presentation.reader.components.ExtractedTextReader
 import com.bnr.app.presentation.reader.components.TtsControls
 import com.bnr.app.presentation.reader.components.WebViewReader
@@ -42,10 +40,16 @@ fun ReaderScreen(
     viewModel: ReaderViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
-    val darkTheme = isSystemInDarkTheme()
 
-    val bgColor = if (darkTheme) ReaderBackgroundDark else ReaderBackground
-    val textColor = if (darkTheme) ReaderTextDark else ReaderText
+    val readerPreset = ReaderColorPreset.fromKey(state.settings.readerColorPreset)
+    val readerColors = readerPreset.toColors(
+        defaultBg   = MaterialTheme.colorScheme.background,
+        defaultText = MaterialTheme.colorScheme.onBackground,
+        customBg    = state.settings.customBgColor?.let { Color(it) },
+        customText  = state.settings.customTextColor?.let { Color(it) }
+    )
+    val bgColor   = readerColors.background
+    val textColor = readerColors.text
 
     Box(
         modifier = modifier
@@ -123,10 +127,13 @@ fun ReaderScreen(
 
         if (state.showSettingsSheet) {
             ReaderSettingsSheet(
-                settings           = state.settings,
-                onDismiss          = viewModel::toggleSettingsSheet,
-                onReaderModeToggle = viewModel::toggleReaderMode,
-                onFontSizeChange   = viewModel::updateFontSize
+                settings                = state.settings,
+                onDismiss               = viewModel::toggleSettingsSheet,
+                onReaderModeToggle      = viewModel::toggleReaderMode,
+                onFontSizeChange        = viewModel::updateFontSize,
+                onColorPresetChange     = viewModel::updateColorPreset,
+                onCustomBgColorChange   = viewModel::updateCustomBgColor,
+                onCustomTextColorChange = viewModel::updateCustomTextColor
             )
         }
     }

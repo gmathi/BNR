@@ -58,6 +58,7 @@ class SettingsViewModelTest {
         every { appPreferences.driveBackupEnabled }       returns flowOf(false)
         every { appPreferences.lastBackupTimeMs }         returns flowOf(null)
         every { appPreferences.driveAccountEmail }        returns flowOf(null)
+        every { appPreferences.appTheme }                 returns flowOf("system")
         coEvery { ttsManager.getAvailableVoices() }       returns emptyList()
 
         return SettingsViewModel(
@@ -256,5 +257,30 @@ class SettingsViewModelTest {
                 assertNotNull(errorState.backupError)
                 cancelAndIgnoreRemainingEvents()
             }
+        }
+
+    // ── App theme ─────────────────────────────────────────────────────────────
+
+    @Test
+    fun `appTheme initial value is system`() =
+        runTest(UnconfinedTestDispatcher()) {
+            every { appPreferences.appTheme } returns flowOf("system")
+
+            val vm = createViewModel()
+
+            vm.uiState.test {
+                val state = awaitItem()
+                assertEquals("system", state.appTheme)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `onAppThemeChanged saves to preferences`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val vm = createViewModel()
+            vm.onAppThemeChanged("dark")
+
+            coVerify { appPreferences.setAppTheme("dark") }
         }
 }

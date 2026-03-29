@@ -377,5 +377,40 @@ class MappersTest {
         assertEquals(16f, settings.fontSize)
         assertNull(settings.ttsVoiceId)
         assertEquals("android", settings.ttsEngineId)
+        assertEquals("default", settings.readerColorPreset)
+        assertNull(settings.customBgColor)
+        assertNull(settings.customTextColor)
+    }
+
+    @Test
+    fun `NovelReaderSettings toEntity maps color preset fields correctly`() {
+        val settings = buildSettings().copy(
+            readerColorPreset = "paper",
+            customBgColor = 0xFFF5F0E8L,
+            customTextColor = 0xFF2C2C2CL
+        )
+        val entity = settings.toEntity()
+        assertEquals("paper", entity.readerColorPreset)
+        assertEquals(0xFFF5F0E8L, entity.customBgColor)
+        assertEquals(0xFF2C2C2CL, entity.customTextColor)
+    }
+
+    @Test
+    fun `NovelReaderSettings round-trip with custom color preset`() {
+        val original = buildSettings().copy(
+            readerColorPreset = "custom",
+            customBgColor = 0xFF000000L,
+            customTextColor = 0xFFFFFFFF_L
+        )
+        assertEquals(original, original.toEntity().toDomain())
+    }
+
+    @Test
+    fun `NovelReaderSettings round-trip with null custom colors`() {
+        val original = buildSettings().copy(readerColorPreset = "amoled")
+        val roundTripped = original.toEntity().toDomain()
+        assertEquals("amoled", roundTripped.readerColorPreset)
+        assertNull(roundTripped.customBgColor)
+        assertNull(roundTripped.customTextColor)
     }
 }

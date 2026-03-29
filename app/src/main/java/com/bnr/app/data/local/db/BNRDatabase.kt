@@ -23,7 +23,7 @@ import com.bnr.app.data.local.db.entity.NovelUpdateEntity
         NovelReaderSettingsEntity::class,
         NovelUpdateEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class BNRDatabase : RoomDatabase() {
@@ -46,6 +46,14 @@ abstract class BNRDatabase : RoomDatabase() {
                         FOREIGN KEY(novelId) REFERENCES novels(id) ON DELETE CASCADE
                     )
                 """.trimIndent())
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE novel_reader_settings ADD COLUMN readerColorPreset TEXT NOT NULL DEFAULT 'default'")
+                db.execSQL("ALTER TABLE novel_reader_settings ADD COLUMN customBgColor INTEGER")
+                db.execSQL("ALTER TABLE novel_reader_settings ADD COLUMN customTextColor INTEGER")
             }
         }
     }

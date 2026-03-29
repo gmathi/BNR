@@ -58,3 +58,23 @@ val ReaderBackground = Color(0xFFF5F0E8)    // warm paper
 val ReaderBackgroundDark = Color(0xFF1C1B18)
 val ReaderText = Color(0xFF2C2C2C)
 val ReaderTextDark = Color(0xFFE0DDD5)
+
+// ── Reader preset color palettes ──────────────────────────────────────────
+// Paper — warm cream
+val ReaderBgPaper       = Color(0xFFF5F0E8)
+val ReaderTextPaper     = Color(0xFF2C2C2C)
+// Dark — charcoal
+val ReaderBgDarkPreset  = Color(0xFF1C1B18)
+val ReaderTextDarkPreset= Color(0xFFE0DDD5)
+// AMOLED — pure black
+val ReaderBgAmoled      = Color(0xFF000000)
+val ReaderTextAmoled    = Color(0xFFEEEEEE)
+// Solarized — warm cream with solarized text
+val ReaderBgSolarized   = Color(0xFFFDF6E3)
+val ReaderTextSolarized = Color(0xFF657B83)
+// Forest — dark green
+val ReaderBgForest      = Color(0xFF1A2415)
+val ReaderTextForest    = Color(0xFFB8D4A8)
+// Night Blue — dark navy
+val ReaderBgNightBlue   = Color(0xFF0D1B2A)
+val ReaderTextNightBlue = Color(0xFFCDD5E0)
