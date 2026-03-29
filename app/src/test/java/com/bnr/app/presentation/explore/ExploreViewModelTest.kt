@@ -1,4 +1,4 @@
-package com.bnr.app.presentation.search
+package com.bnr.app.presentation.explore
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import app.cash.turbine.test
@@ -33,7 +33,7 @@ import org.junit.runners.JUnit4
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(JUnit4::class)
-class SearchViewModelTest {
+class ExploreViewModelTest {
 
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
@@ -74,12 +74,12 @@ class SearchViewModelTest {
         sources: List<com.bnr.app.source.Source> = listOf(fakeSource),
         libraryFlow: kotlinx.coroutines.flow.Flow<List<com.bnr.app.domain.model.Novel>> =
             flowOf(emptyList())
-    ): SearchViewModel {
+    ): ExploreViewModel {
         every { sourceManager.getAllSources() } returns sources
         every { appPreferences.preferredSourceId } returns flowOf(fakeSource.id)
         every { getLibraryNovels() } returns libraryFlow
         coEvery { getPopularNovels(any(), any()) } returns popularResult
-        return SearchViewModel(searchNovels, getPopularNovels, getLibraryNovels, sourceManager, appPreferences)
+        return ExploreViewModel(searchNovels, getPopularNovels, getLibraryNovels, sourceManager, appPreferences)
     }
 
     // ── 1. Initial state ──────────────────────────────────────────────────────

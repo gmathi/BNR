@@ -1,4 +1,4 @@
-package com.bnr.app.presentation.search
+package com.bnr.app.presentation.explore
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -49,16 +49,16 @@ import kotlinx.coroutines.flow.filter
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun SearchScreen(
+fun ExploreScreen(
     onNovelClick: (Novel) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: SearchViewModel = hiltViewModel()
+    viewModel: ExploreViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
 
     Column(modifier = modifier.fillMaxSize()) {
         // Search bar at top (shared between modes)
-        SearchBar(
+        ExploreSearchBar(
             query = state.query,
             onQueryChange = viewModel::onQueryChanged,
             // Source selector only shown in popular mode and when >1 source
@@ -91,7 +91,7 @@ fun SearchScreen(
 
 @Composable
 private fun PopularContent(
-    state: SearchUiState,
+    state: ExploreUiState,
     onNovelClick: (Novel) -> Unit,
     onLoadMore: () -> Unit
 ) {
@@ -141,7 +141,7 @@ private fun PopularContent(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SearchContent(
-    state: SearchUiState,
+    state: ExploreUiState,
     onNovelClick: (Novel) -> Unit,
     onLoadMore: (String) -> Unit
 ) {
@@ -181,7 +181,7 @@ private fun SearchContent(
                     sourceState.novels.isEmpty() && !sourceState.isLoading -> {
                         // Empty state
                         Text(
-                            text = stringResource(R.string.search_source_no_results),
+                            text = stringResource(R.string.explore_source_no_results),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -215,7 +215,7 @@ private fun SearchContent(
                                 .align(Alignment.CenterEnd)
                                 .padding(end = 12.dp)
                         ) {
-                            Text(stringResource(R.string.search_load_more))
+                            Text(stringResource(R.string.explore_load_more))
                         }
                     }
                 }
@@ -224,10 +224,10 @@ private fun SearchContent(
     }
 }
 
-// ── Shared search bar ─────────────────────────────────────────────────────────
+// ── Search bar ────────────────────────────────────────────────────────────────
 
 @Composable
-private fun SearchBar(
+private fun ExploreSearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     showSourceSelector: Boolean,
@@ -243,14 +243,14 @@ private fun SearchBar(
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
-            placeholder = { Text(stringResource(R.string.search_hint)) },
+            placeholder = { Text(stringResource(R.string.explore_hint)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
         if (showSourceSelector) {
             Box {
                 TextButton(onClick = { dropdownExpanded = true }) {
-                    Text("${stringResource(R.string.search_source_label)}: $selectedName")
+                    Text("${stringResource(R.string.explore_source_label)}: $selectedName")
                 }
                 DropdownMenu(
                     expanded = dropdownExpanded,

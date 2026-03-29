@@ -1,4 +1,4 @@
-package com.bnr.app.presentation.search
+package com.bnr.app.presentation.explore
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -33,7 +33,7 @@ data class SourceSearchState(
     val error: String? = null
 )
 
-data class SearchUiState(
+data class ExploreUiState(
     val query: String = "",
     val isSearchMode: Boolean = false,
     // --- Popular mode ---
@@ -52,7 +52,7 @@ data class SearchUiState(
 
 @OptIn(FlowPreview::class)
 @HiltViewModel
-class SearchViewModel @Inject constructor(
+class ExploreViewModel @Inject constructor(
     private val searchNovels: SearchNovelsUseCase,
     private val getPopularNovels: GetPopularNovelsUseCase,
     private val getLibraryNovels: GetLibraryNovelsUseCase,
@@ -60,8 +60,8 @@ class SearchViewModel @Inject constructor(
     private val appPreferences: AppPreferences
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SearchUiState())
-    val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(ExploreUiState())
+    val uiState: StateFlow<ExploreUiState> = _uiState.asStateFlow()
 
     private var searchJob: Job? = null
 
@@ -148,13 +148,6 @@ class SearchViewModel @Inject constructor(
             performSourceSearch(sourceId, query, sourceState.page + 1, reset = false)
         }
     }
-
-    // Keep the old method names around as thin wrappers so the existing
-    // SearchScreen that references onSourceSelected / loadNextPage still compiles
-    // after we port it; these will go away once the screen is fully migrated.
-    fun onSourceSelected(sourceId: String) = onPopularSourceSelected(sourceId)
-
-    fun loadNextPage() = loadNextPopularPage()
 
     // ── Private helpers ───────────────────────────────────────────────────────
 

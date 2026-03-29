@@ -3,7 +3,7 @@ package com.bnr.app.presentation.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -23,10 +23,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.bnr.app.R
+import com.bnr.app.presentation.explore.ExploreScreen
 import com.bnr.app.presentation.library.LibraryScreen
 import com.bnr.app.presentation.noveldetail.NovelDetailScreen
 import com.bnr.app.presentation.reader.ReaderScreen
-import com.bnr.app.presentation.search.SearchScreen
 import com.bnr.app.presentation.settings.SettingsScreen
 
 private data class BottomNavItem(
@@ -37,7 +37,7 @@ private data class BottomNavItem(
 
 private val bottomNavItems = listOf(
     BottomNavItem(Screen.Library,  R.string.nav_library,  Icons.Default.Book),
-    BottomNavItem(Screen.Search,   R.string.nav_search,   Icons.Default.Search),
+    BottomNavItem(Screen.Explore,  R.string.nav_explore,  Icons.Default.Explore),
     BottomNavItem(Screen.Settings, R.string.nav_settings, Icons.Default.Settings)
 )
 
@@ -49,7 +49,7 @@ fun BNRNavGraph() {
 
     val showBottomBar = currentDestination?.route in listOf(
         Screen.Library.route,
-        Screen.Search.route,
+        Screen.Explore.route,
         Screen.Settings.route
     )
 
@@ -90,8 +90,8 @@ fun BNRNavGraph() {
                 )
             }
 
-            composable(Screen.Search.route) {
-                SearchScreen(
+            composable(Screen.Explore.route) {
+                ExploreScreen(
                     onNovelClick = { novel ->
                         navController.navigate(Screen.NovelDetail.createRoute(novel.sourceId, novel.url))
                     }
