@@ -296,4 +296,44 @@ class SearchViewModelTest {
             assertEquals(listOf(novel1, novel2), vm.uiState.value.popularNovels)
             assertEquals(1, vm.uiState.value.popularPage)
         }
+
+    // ── 12. loadNextPopularPage ───────────────────────────────────────────────
+
+    @Test
+    fun `loadNextPopularPage increments page and appends novels`() =
+        runTest(UnconfinedTestDispatcher()) {
+            coEvery { getPopularNovels("com.source.test", 1) } returns
+                SourceResult.Success(listOf(novel1))
+            coEvery { getPopularNovels("com.source.test", 2) } returns
+                SourceResult.Success(listOf(novel2))
+
+            val vm = createViewModel(popularResult = SourceResult.Success(listOf(novel1)))
+
+            assertEquals(1, vm.uiState.value.popularPage)
+            assertEquals(listOf(novel1), vm.uiState.value.popularNovels)
+
+            vm.loadNextPopularPage()
+
+            assertEquals(2, vm.uiState.value.popularPage)
+            assertEquals(listOf(novel1, novel2), vm.uiState.value.popularNovels)
+        }
+
+    @Test
+    fun `loadNextPopularPage does nothing when hasNextPage is false`() =
+        runTest(UnconfinedTestDispatcher()) {
+            // Empty result on page 1 means hasNextPage becomes false
+            coEvery { getPopularNovels("com.source.test", 1) } returns
+                SourceResult.Success(emptyList())
+
+            val vm = createViewModel(popularResult = SourceResult.Success(emptyList()))
+
+            assertFalse("hasNextPage should be false when page returns empty", vm.uiState.value.popularHasNextPage)
+
+            vm.loadNextPopularPage()
+
+            // Page should not advance
+            assertEquals(1, vm.uiState.value.popularPage)
+            coVerify(atLeast = 1) { getPopularNovels("com.source.test", 1) }
+            coVerify(exactly = 0) { getPopularNovels("com.source.test", 2) }
+        }
 }

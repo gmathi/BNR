@@ -283,4 +283,24 @@ class SettingsViewModelTest {
 
             coVerify { appPreferences.setAppTheme("dark") }
         }
+
+    // ── Drive backup toggle ───────────────────────────────────────────────────
+
+    @Test
+    fun `onDriveBackupToggled true saves enabled preference`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val vm = createViewModel()
+            vm.onDriveBackupToggled(true)
+
+            coVerify { appPreferences.setDriveBackupEnabled(true) }
+        }
+
+    @Test
+    fun `onDriveBackupToggled false saves disabled preference`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val vm = createViewModel()
+            vm.onDriveBackupToggled(false)
+
+            coVerify { appPreferences.setDriveBackupEnabled(false) }
+        }
 }

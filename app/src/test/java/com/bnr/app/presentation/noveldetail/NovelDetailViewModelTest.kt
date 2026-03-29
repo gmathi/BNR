@@ -275,4 +275,61 @@ class NovelDetailViewModelTest {
 
             coVerify { downloadChapterUseCase(specificChapter) }
         }
+
+    // ── downloadAll ───────────────────────────────────────────────────────────
+
+    @Test
+    fun `downloadAll calls downloadChapter for every chapter in state`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val chapter2 = makeChapter(id = "src::slug::2", novelId = fakeNovel.id, sourceId = sourceId, chapterNumber = 2f)
+            stubDefaults(chapters = listOf(fakeChapter, chapter2))
+            val vm = createViewModel()
+
+            vm.downloadAll()
+
+            coVerify(exactly = 1) { downloadChapterUseCase(fakeChapter) }
+            coVerify(exactly = 1) { downloadChapterUseCase(chapter2) }
+        }
+
+    @Test
+    fun `downloadAll with empty chapter list invokes downloadChapter zero times`() =
+        runTest(UnconfinedTestDispatcher()) {
+            stubDefaults(chapters = emptyList())
+            val vm = createViewModel()
+
+            vm.downloadAll()
+
+            coVerify(exactly = 0) { downloadChapterUseCase(any()) }
+        }
+
+    // ── refresh ───────────────────────────────────────────────────────────────
+
+    @Test
+    fun `refresh re-invokes getNovelDetail`() =
+        runTest(UnconfinedTestDispatcher()) {
+            stubDefaults()
+            val vm = createViewModel()
+
+            // getNovelDetail was called once during init
+            coVerify(exactly = 1) { getNovelDetail(any(), any()) }
+
+            vm.refresh()
+
+            // Should be called a second time after refresh
+            coVerify(exactly = 2) { getNovelDetail(any(), any()) }
+        }
+
+    @Test
+    fun `refresh updates state with new novel data`() =
+        runTest(UnconfinedTestDispatcher()) {
+            stubDefaults()
+            val vm = createViewModel()
+
+            val updatedNovel = fakeNovel.copy(title = "Updated Title")
+            coEvery { getNovelDetail(any(), any()) } returns SourceResult.Success(updatedNovel)
+
+            vm.refresh()
+
+            assertEquals("Updated Title", vm.uiState.value.novel?.title)
+        }
 }

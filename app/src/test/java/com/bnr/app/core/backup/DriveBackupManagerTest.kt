@@ -270,4 +270,45 @@ class DriveBackupManagerTest {
 
         assertTrue(result.isFailure)
     }
+
+    @Test
+    fun `restore applies backed-up preferences to AppPreferences`() = runTest {
+        val backupData = BackupData(
+            exportedAt     = 1_000L,
+            novels         = listOf(testNovel),
+            chapters       = emptyList(),
+            readerSettings = emptyList(),
+            preferences    = mapOf(
+                "preferred_source" to "com.source.other",
+                "reader_font_size" to "20.0",
+                "reader_theme"     to "dark",
+                "update_interval"  to "12"
+            )
+        )
+        val backupJson = gson.toJson(backupData)
+        val listJson   = """{"files":[{"id":"file123","modifiedTime":"2024-01-01T00:00:00Z"}]}"""
+
+        var callCount = 0
+        every { okHttpClient.newCall(any()) } answers {
+            val dummyRequest = Request.Builder().url("https://www.googleapis.com/").build()
+            val body = if (callCount++ == 0) listJson else backupJson
+            val response = Response.Builder()
+                .request(dummyRequest)
+                .protocol(Protocol.HTTP_1_1)
+                .code(200)
+                .message("OK")
+                .body(body.toResponseBody("application/json".toMediaType()))
+                .build()
+            val call = mockk<Call>()
+            every { call.execute() } returns response
+            call
+        }
+
+        manager.restore("token")
+
+        coVerify { appPreferences.setPreferredSourceId("com.source.other") }
+        coVerify { appPreferences.setReaderFontSize(20f) }
+        coVerify { appPreferences.setReaderTheme("dark") }
+        coVerify { appPreferences.setUpdateIntervalHours(12) }
+    }
 }

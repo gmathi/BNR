@@ -155,4 +155,47 @@ class UpdateSchedulerTest {
             constraints.requiredNetworkType != NetworkType.UNMETERED
         )
     }
+
+    // ── repeatInterval matches hours parameter ────────────────────────────────
+
+    @Test
+    fun `schedule sets repeatInterval matching the hours parameter`() {
+        val requestSlot = slot<PeriodicWorkRequest>()
+
+        every {
+            workManager.enqueueUniquePeriodicWork(
+                any(),
+                any(),
+                capture(requestSlot)
+            )
+        } returns mockk(relaxed = true)
+
+        val hours = 8
+        scheduler.schedule(hours)
+
+        val expectedMs = hours * 60L * 60L * 1_000L
+        assertEquals(
+            "intervalDuration should equal hours * 3_600_000 ms",
+            expectedMs,
+            requestSlot.captured.workSpec.intervalDuration
+        )
+    }
+
+    @Test
+    fun `schedule with 24 hours sets repeatInterval to 24 hours in milliseconds`() {
+        val requestSlot = slot<PeriodicWorkRequest>()
+
+        every {
+            workManager.enqueueUniquePeriodicWork(
+                any(),
+                any(),
+                capture(requestSlot)
+            )
+        } returns mockk(relaxed = true)
+
+        scheduler.schedule(24)
+
+        val expectedMs = 24 * 60L * 60L * 1_000L
+        assertEquals(expectedMs, requestSlot.captured.workSpec.intervalDuration)
+    }
 }
