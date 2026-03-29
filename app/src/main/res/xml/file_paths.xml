@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <external-files-path name="bnr_downloads" path="Downloads/" />
+    <external-cache-path name="bnr_cache" path="." />
+    <files-path name="bnr_files" path="." />
+</paths>
